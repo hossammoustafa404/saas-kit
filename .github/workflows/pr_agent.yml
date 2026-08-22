@@ -28,6 +28,7 @@ jobs:
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "false"
+          github_action_config.pr_actions: '["opened", "synchronize"]'
 
   agent_output_guard:
     needs: pr_agent_job
