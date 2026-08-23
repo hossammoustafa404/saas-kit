@@ -1,3 +1,53 @@
+# Project Rules
+
+This is an Nx monorepo: `apps/web` and `apps/admin` (Next.js), `apps/server` (NestJS API), `packages/schemas` (@stack/schemas, shared Zod schemas). Detailed engineering standards live in `docs/rules/`.
+
+## External File Loading
+
+CRITICAL: Rule references below (e.g., @docs/rules/monorepo.md) are mandatory instructions for the SPECIFIC task at hand. Load them on a need-to-know basis with the Read tool:
+
+- Do NOT preemptively load all references — lazy-load based on actual need
+- When loaded, treat content as mandatory instructions that override defaults
+- Follow references between rule files recursively when needed
+
+## General — read immediately, applies to all tasks
+
+- @docs/rules/monorepo.md — Nx monorepo layout, apps, packages, module boundaries
+- @docs/rules/naming-conventions.md — universal naming conventions for files, symbols, database
+- @docs/rules/clean-code.md — core clean code principles for TypeScript
+
+## Backend — load when working in apps/server/
+
+- @docs/rules/backend/role.md — senior backend engineer role and expertise
+- @docs/rules/backend/tech-stack.md — approved backend technologies and libraries
+- @docs/rules/backend/architecture.md — feature-based NestJS module architecture
+- @docs/rules/backend/nestjs.md — framework discipline, DI, module patterns
+- @docs/rules/backend/controllers.md — controller layer and API response conventions
+- @docs/rules/backend/validation.md — Zod validation with nestjs-zod and shared schemas
+- @docs/rules/backend/database.md — Prisma and PostgreSQL patterns
+- @docs/rules/backend/authentication.md — better-auth integration via nestjs-better-auth
+- @docs/rules/backend/authorization.md — CASL authorization and guards
+- @docs/rules/backend/security.md — security practices and secrets handling
+- @docs/rules/backend/api-docs.md — Swagger/OpenAPI documentation requirements
+- @docs/rules/backend/testing.md — Jest and Supertest conventions
+
+## Frontend — load when working in apps/web/ or apps/admin/
+
+- @docs/rules/frontend/role.md — senior frontend engineer role and expertise
+- @docs/rules/frontend/tech-stack.md — approved frontend technologies and libraries
+- @docs/rules/frontend/architecture.md — feature-based architecture, views, public API boundaries
+- @docs/rules/frontend/nextjs.md — App Router patterns, server/client component discipline
+- @docs/rules/frontend/components.md — React component design and composition
+- @docs/rules/frontend/state-management.md — React Query and Zustand patterns
+- @docs/rules/frontend/forms-validation.md — react-hook-form, Zod, shadcn/ui forms
+- @docs/rules/frontend/api-services.md — API service layer, fetchers, React Query integration
+- @docs/rules/frontend/styling.md — Tailwind CSS and Lucide icons
+- @docs/rules/frontend/authentication.md — better-auth client integration and sessions
+- @docs/rules/frontend/authorization.md — CASL ability checks and permission UI
+- @docs/rules/frontend/performance.md — performance optimization patterns
+- @docs/rules/frontend/security.md — client-side security boundaries
+- @docs/rules/frontend/testing.md — Playwright E2E conventions
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 

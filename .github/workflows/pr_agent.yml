@@ -19,11 +19,13 @@ jobs:
         uses: docker://pragent/pr-agent:0.42.0-github_action
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          openrouter__key: ${{ secrets.OPENROUTER_API_KEY }}
-          config.model: "openrouter/z-ai/glm-5.2:free"
-          config.fallback_models: '["openrouter/z-ai/glm-5.2:free"]'
-          config.custom_model_max_tokens: "20000"
-          config.ai_timeout: "300"
-          github_action_config.auto_review: "true"
-          github_action_config.auto_describe: "true"
-          github_action_config.auto_improve: "false"
+          OPENAI__API_BASE: 'https://opencode.ai/zen/v1'
+          OPENAI__KEY: ${{ secrets.ZEN_API_KEY }}
+          config.model: 'openai/x-preview-f-free'
+          config.fallback_models: '["openai/nemotron-3-ultra-free", "openai/big-pickle"]'
+          config.custom_model_max_tokens: '128000'
+          config.ai_timeout: '300'
+          github_action_config.auto_review: 'true'
+          github_action_config.auto_describe: 'true'
+          github_action_config.auto_improve: 'false'
+          github_action_config.pr_actions: '["opened", "synchronize"]'
