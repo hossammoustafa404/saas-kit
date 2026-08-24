@@ -24,8 +24,7 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    // Empty schema has no models; SELECT 1 is the agreed connection smoke test.
-    await this.$queryRaw`SELECT 1`;
+    await this.$connect();
     this.logger.log('Database connection verified');
   }
 

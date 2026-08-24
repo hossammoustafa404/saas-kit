@@ -113,6 +113,7 @@ packages/schemas/
 - **NEVER** deep-import a schema file from an app (`@saas-kit/schemas/health/health.schema`). Consumers use the package barrel only.
 - Export **HTTP** schemas and inferred types from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`. **NEVER** export `*Example` constants from the barrel.
 - **NEVER** add `*.spec.ts`, `*.test.ts`, Jest config, or a test target in `packages/schemas`. Contracts are proven by consuming apps (server e2e, controller specs, form tests) — not by parsing examples in this package.
+- **NEVER** add `*.schema.spec.ts` in `apps/server` either — not for `shared/config/env.schema.ts` and not for seed env schemas. See `backend/testing.md`.
 - **NEVER** export internals — one barrel, named exports only.
 - **NEVER** put server env, secrets, or Prisma config schemas here (`DATABASE_URL`, `BETTER_AUTH_SECRET`, …). Those live in `apps/server/src/shared/config/` only. See `backend/validation.md`, `backend/security.md`.
 - All three apps depend on `@saas-kit/schemas` via workspace dependency — not relative paths like `../../packages/schemas`.

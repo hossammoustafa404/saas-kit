@@ -59,5 +59,6 @@ export const CreateUserSchema = z
 - **ALWAYS** scope files by module: `packages/schemas/src/{module}/{name}.schema.ts` — e.g. `health/health.schema.ts`, `user/create-user.schema.ts`. One folder may contain multiple schema files.
 - **ALWAYS** name files `{name}.schema.ts`. **NEVER** `health.ts`, `user.ts`, or a schema file at `src/` root.
 - **NEVER** add specs or a Jest target in `packages/schemas`. See `testing.md`.
+- **NEVER** colocate specs with a Zod schema. No `env.schema.spec.ts`, no `*.schema.spec.ts` on the server. See `testing.md`.
 - **NEVER** suffix types with `Schema` — `CreateUserInput`, not `CreateUserSchemaType`.
 - **NEVER** define parallel interfaces or class-validator DTOs for the same shape.
