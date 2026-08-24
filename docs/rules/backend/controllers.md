@@ -30,7 +30,7 @@
 // modules/user/user.controller.ts
 import { Controller, Get, Post, Body, Param } from "@nestjs/common";
 import { Session, UserSession } from "@thallesp/nestjs-better-auth";
-import { CreateUserSchema, type CreateUserInput } from "@stack/schemas";
+import { CreateUserSchema, type CreateUserInput } from "@saas-kit/schemas";
 import { ZodValidationPipe } from "nestjs-zod";
 import { FindOneUserService, CreateUserService } from "./services";
 

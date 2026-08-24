@@ -21,7 +21,7 @@
 ```ts
 // features/users/services/api.ts
 import { privateFetcher } from "@/lib/fetcher";
-import { UserSchema, type CreateUserInput, type User } from "@stack/schemas";
+import { UserSchema, type CreateUserInput, type User } from "@saas-kit/schemas";
 
 export async function getUser(id: string): Promise<User> {
   const { data } = await privateFetcher.get(`/users/${id}`);

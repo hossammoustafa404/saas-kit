@@ -1,6 +1,6 @@
 # Project Rules
 
-This is an Nx monorepo: `apps/web` and `apps/admin` (Next.js), `apps/server` (NestJS API), `packages/schemas` (@stack/schemas, shared Zod schemas). Detailed engineering standards live in `docs/rules/`.
+This is an Nx monorepo: `apps/web` and `apps/admin` (Next.js), `apps/server` (NestJS API), `packages/schemas` (@saas-kit/schemas, shared Zod schemas). Detailed engineering standards live in `docs/rules/`.
 
 ## External File Loading
 

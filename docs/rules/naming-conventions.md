@@ -32,6 +32,8 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Utilities, services, config | `kebab-case.ts` | `define-ability.ts`, `auth-client.ts` |
 | Barrel files | `index.ts` | `components/index.ts` |
 | Test files | same as source + `.test` or `.spec` | `user.service.spec.ts` |
+| Shared schema folders | `kebab-case/` matching the feature module | `health/`, `user/` |
+| Shared schema files | `kebab-case.schema.ts` inside that folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
 | E2E tests | `kebab-case.spec.ts` | `login-flow.spec.ts` |
 
 - **NEVER** use `index.tsx` for components — only `index.ts` for barrels.
@@ -97,18 +99,24 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.
 - Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`.
-- Shared infra: `shared/config/`, `shared/prisma/` — not inside feature modules. **NEVER** `shared/index.ts`.
+- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`.
 
 ## Shared Schemas (Zod)
 
 | Kind | Case | Example |
 |---|---|---|
+| Schema module folder | singular `kebab-case` matching the feature | `health/`, `user/`, `order-item/` |
+| Schema file | `kebab-case` + `.schema.ts` inside the module folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
 | Schema export | `PascalCase` + `Schema` suffix | `LoginSchema`, `UserSchema` |
 | Meta example export | `PascalCase` + `Example` suffix | `CreateUserExample`, `UserExample` |
 | Inferred type export | `PascalCase` + `Input` / domain noun | `LoginInput`, `User` |
 | Partial/update schemas | verb or context prefix | `UpdateUserSchema`, `UpdateUserInput` |
 
-- Schema, inferred type, and `*Example` export live in the **same file**.
+- Schema, inferred type, and `*Example` export live in the **same** `{name}.schema.ts` file.
+- **ALWAYS** put schema files in `packages/schemas/src/{module}/`. One module folder may hold multiple `{name}.schema.ts` files.
+- **ALWAYS** name shared-package files `{name}.schema.ts`.
+- **NEVER** put `*.schema.ts` at `packages/schemas/src/` root.
+- **NEVER** use a bare domain filename (`health.ts`, `user.ts`, `auth.ts`) in `packages/schemas`.
 - **NEVER** use `camelCase` for schema names — `LoginSchema`, not `loginSchema`.
 - **NEVER** suffix types with `Schema` — `LoginInput`, not `LoginSchemaType`.
 - **NEVER** define parallel interfaces for the same shape as a schema.
@@ -137,18 +145,19 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | NestJS config keys | `SCREAMING_SNAKE_CASE` | `DATABASE_URL` |
 
 - **NEVER** prefix server-only secrets with `NEXT_PUBLIC_`.
-- Server env Zod schema: `apps/server/src/shared/config/env.schema.ts` — **NEVER** `env.ts`, **NEVER** in `@stack/schemas`.
+- Server env Zod schema: `apps/server/src/shared/config/env.schema.ts` — **NEVER** `env.ts`, **NEVER** in `@saas-kit/schemas`.
 
 ## Tests
 
 - Unit/integration: `{source-name}.spec.ts` colocated beside source. Backend: **always** colocated — no `__tests__/`.
+- **NEVER** put specs in `packages/schemas` (`*.spec.ts`, `*.test.ts`, `jest.config.*`, `tsconfig.spec.json`).
 - E2E: `e2e/{feature}/{flow}.spec.ts` — `e2e/auth/login-flow.spec.ts`.
 - Test description: behavior-driven — `it("should reject invalid email")`, not `it("test 1")`.
 - Factory/fixture helpers: `create` + noun — `createUser`, `createMockSession`.
 
 ## Imports & Exports
 
-- Path aliases: `@/` for app root (per-app, not workspace-wide). Apps use `@saas-kit/{app}` (`@saas-kit/web`, `@saas-kit/server`). Shared packages use `@stack/{package}` — e.g. `@stack/schemas`. See `monorepo.md`.
+- Path aliases: `@/` for app root (per-app, not workspace-wide). Apps use `@saas-kit/{app}` (`@saas-kit/web`, `@saas-kit/server`). Shared packages use `@saas-kit/{package}` — e.g. `@saas-kit/schemas`. See `monorepo.md`.
 - **NEVER** use generic scopes like `@org/` or `@repo/`.
 - Named exports by default. Default exports only for Next.js `page.tsx` / `layout.tsx` requirements.
 - Barrel re-exports use named exports — `export { UserCard } from "./user-card"`.

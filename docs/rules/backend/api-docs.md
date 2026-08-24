@@ -6,7 +6,7 @@ API docs are split into two sources:
 
 | Source         | Technology                       | URL (default)                  | Covers                        |
 | -------------- | -------------------------------- | ------------------------------ | ----------------------------- |
-| Application    | `@nestjs/swagger` + `nestjs-zod` | `/docs` + `/docs-json`       | Feature module REST endpoints |
+| Application    | `@nestjs/swagger` + `nestjs-zod` | `/api/docs` + `/api/docs-json` | Feature module REST endpoints |
 | Authentication | better-auth `openAPI()` plugin   | `/api/auth/reference`          | Auth routes, plugins, models  |
 
 See [Better Auth Open API plugin](https://better-auth.com/docs/plugins/open-api).
@@ -16,11 +16,8 @@ See [Better Auth Open API plugin](https://better-auth.com/docs/plugins/open-api)
 ```text
 src/
 ├── shared/
-│   └── docs/
-│       ├── swagger.config.ts       # DocumentBuilder — metadata, tags, security
-│       ├── setup-swagger.ts        # patchNestJsSwagger + SwaggerModule.setup
-│       ├── api-error.schema.ts     # Shared error response Zod schema + DTO
-│       └── index.ts
+│   └── swagger/
+│       └── setup-swagger.ts        # DocumentBuilder + cleanupOpenApiDoc + SwaggerModule.setup
 └── modules/
     ├── auth/
     │   └── lib/
@@ -32,87 +29,83 @@ src/
             └── user-response.dto.ts # createZodDto(UserSchema) — for @ApiOkResponse
 ```
 
+- **ALWAYS** keep Swagger setup in `shared/swagger/setup-swagger.ts`.
+- **NEVER** create `shared/docs/`.
+- **NEVER** create `shared/swagger/index.ts`.
+- **NEVER** split DocumentBuilder into `swagger.config.ts` or any second file.
+- **NEVER** put error envelopes, Scalar, or other documentation products in `shared/swagger/`.
+- Import `setupSwagger` from `shared/swagger/setup-swagger` in `main.ts` — nowhere else.
+
 ## Global Swagger Setup
 
-**`shared/docs/swagger.config.ts`** — rich metadata:
+**`shared/swagger/setup-swagger.ts`** — DocumentBuilder metadata and `SwaggerModule.setup` in the same file:
 
 ```ts
-import { DocumentBuilder } from "@nestjs/swagger";
-
-export function buildSwaggerConfig() {
-  return new DocumentBuilder()
-    .setTitle("My API")
-    .setDescription(
-      "REST API for application resources. " +
-      "Authentication endpoints are documented separately at /api/auth/reference.",
-    )
-    .setVersion(process.env.API_VERSION ?? "1.0")
-    .addServer("http://localhost:3333", "Local")
-    .addServer(process.env.API_URL ?? "", "Current environment")
-    .addCookieAuth("better-auth.session_token", {
-      type: "apiKey",
-      in: "cookie",
-      description: "Session cookie set by better-auth after sign-in",
-    })
-    .addTag("user", "User profile and account management")
-    .addTag("health", "Service health and readiness")
-    .build();
-}
-```
-
-**`shared/docs/setup-swagger.ts`:**
-
-```ts
-import { SwaggerModule } from "@nestjs/swagger";
-import { patchNestJsSwagger } from "nestjs-zod";
-import { buildSwaggerConfig } from "./swagger.config";
+import type { INestApplication } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 export function setupSwagger(app: INestApplication) {
-  patchNestJsSwagger(); // MUST run before createDocument
+  const config = new DocumentBuilder()
+    .setTitle('SaaS Kit API')
+    .setDescription(
+      'REST API for application resources. Health is a process-up signal only.',
+    )
+    .setVersion('1.0')
+    .addServer('http://localhost:9000', 'Local')
+    .addTag(
+      'health',
+      'Health signal that the API process is accepting HTTP. Does not report whether PostgreSQL or other dependencies are reachable.',
+    )
+    .build();
 
-  const document = SwaggerModule.createDocument(app, buildSwaggerConfig(), {
+  const document = SwaggerModule.createDocument(app, config, {
     operationIdFactory: (controllerKey, methodKey) =>
-      `${controllerKey.replace(/Controller$/, "")}_${methodKey}`,
+      `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
   });
 
-  SwaggerModule.setup("docs", app, document, {
-    jsonDocumentUrl: "docs-json",
+  SwaggerModule.setup('docs', app, cleanupOpenApiDoc(document), {
+    useGlobalPrefix: true,
+    jsonDocumentUrl: 'docs-json',
     swaggerOptions: {
       persistAuthorization: true,
-      tagsSorter: "alpha",
-      operationsSorter: "alpha",
-      docExpansion: "list",
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+      docExpansion: 'list',
     },
   });
 }
 ```
 
-- Call `setupSwagger(app)` from `main.ts` — gate behind env (`development`, `staging`). See `security.md`.
-- `jsonDocumentUrl` exposes `/docs-json` for client generators and unified Scalar UIs.
+Do **not** add a cookie security scheme or a better-auth `/api/auth/reference` link until an auth module exists. When auth lands, add `.addCookieAuth("better-auth.session_token", …)` and document auth routes via better-auth Open API — not in Nest Swagger.
+
+- Call `setupSwagger(app)` from `main.ts` in **every** environment — development, staging, and production. Do **not** gate on `NODE_ENV` or any other flag. See `security.md`.
+- Nest mounts Swagger outside the global prefix unless `useGlobalPrefix: true`. Docs must live at `/api/docs` and `/api/docs-json`.
+- `jsonDocumentUrl` exposes `/api/docs-json` (same spec, machine-readable) for generators and future UIs.
 - **NEVER** duplicate Zod shapes in `@ApiProperty()` — schemas flow from `createZodDto`. See `validation.md`.
 
 ## Request & Response Meta Examples
 
-**Every request body and every response body must have a root-level meta example** — a complete, realistic JSON object exported alongside the schema. Field-level `.openapi({ example })` alone is not sufficient.
+**Every request body and every response body must have a root-level meta example** — a complete, realistic JSON object exported alongside the schema. Field-level `.meta({ example })` alone is not sufficient.
 
-### Convention (`@stack/schemas`)
+### Convention (`@saas-kit/schemas`)
 
 Co-locate schema, types, and examples in the same file:
 
-| Export | Purpose | Naming |
-| ------ | ------- | ------ |
-| `*Schema` | Zod schema | `CreateUserSchema` |
-| `*Input` / domain noun | Inferred type | `CreateUserInput`, `User` |
-| `*Example` | Full JSON meta example | `CreateUserExample`, `UserExample` |
+| Export                 | Purpose                | Naming                             |
+| ---------------------- | ---------------------- | ---------------------------------- |
+| `*Schema`              | Zod schema             | `CreateUserSchema`                 |
+| `*Input` / domain noun | Inferred type          | `CreateUserInput`, `User`          |
+| `*Example`             | Full JSON meta example | `CreateUserExample`, `UserExample` |
 
 ```ts
-// packages/schemas/src/user.ts
-import { z } from "zod";
+// packages/schemas/src/user/user.schema.ts
+import { z } from 'zod';
 
 // 1. Define meta example first (used by schema + controllers)
 export const CreateUserExample = {
-  email: "jane@example.com",
-  name: "Jane Doe",
+  email: 'jane@example.com',
+  name: 'Jane Doe',
 } as const;
 
 // 2. Schema with field descriptions + root example
@@ -122,34 +115,34 @@ export const CreateUserSchema = z
       .string()
       .email()
       .describe("User's login email address")
-      .openapi({ example: CreateUserExample.email }),
+      .meta({ example: CreateUserExample.email }),
     name: z
       .string()
       .min(1)
-      .describe("Display name shown in the UI")
-      .openapi({ example: CreateUserExample.name }),
+      .describe('Display name shown in the UI')
+      .meta({ example: CreateUserExample.name }),
   })
-  .describe("Payload for creating a new user")
-  .openapi({ example: CreateUserExample });
+  .describe('Payload for creating a new user')
+  .meta({ example: CreateUserExample });
 
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 
 export const UserExample = {
-  id: "550e8400-e29b-41d4-a716-446655440000",
-  email: "jane@example.com",
-  name: "Jane Doe",
-  createdAt: "2026-01-15T10:30:00.000Z",
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'jane@example.com',
+  name: 'Jane Doe',
+  createdAt: '2026-01-15T10:30:00.000Z',
 } as const;
 
 export const UserSchema = z
   .object({
-    id: z.string().uuid().describe("User UUID"),
+    id: z.string().uuid().describe('User UUID'),
     email: z.string().email(),
     name: z.string(),
     createdAt: z.string().datetime(),
   })
-  .describe("User resource")
-  .openapi({ example: UserExample });
+  .describe('User resource')
+  .meta({ example: UserExample });
 
 export type User = z.infer<typeof UserSchema>;
 ```
@@ -179,19 +172,19 @@ export const UserListSchema = z
       totalPages: z.number().int().nonnegative(),
     }),
   })
-  .openapi({ example: UserListExample });
+  .meta({ example: UserListExample });
 ```
 
 ### Wiring in controllers
 
-Reference the shared example in Swagger decorators — **import from `@stack/schemas`, never inline**:
+Reference the shared example in Swagger decorators — **import from `@saas-kit/schemas`, never inline**:
 
 ```ts
 import {
   CreateUserExample,
   UserExample,
   UserListExample,
-} from "@stack/schemas";
+} from "@saas-kit/schemas";
 
 @Post()
 @ApiBody({ type: CreateUserDto, examples: { default: { value: CreateUserExample } } })
@@ -211,25 +204,30 @@ findAll() { ... }
 
 - Request bodies: `@ApiBody` with `examples.default.value` from `*Example`.
 - Success responses: `@ApiOkResponse` / `@ApiCreatedResponse` with `content["application/json"].example`.
-- Error responses: use `ApiErrorExample` from `shared/docs/api-error.schema.ts`.
+- Error responses: document status and description on the controller (`@ApiBadRequestResponse`, `@ApiUnauthorizedResponse`, etc.). Do **not** invent a shared error DTO under `shared/swagger/`.
 - **NEVER** inline example JSON in controllers — single source of truth is the shared package.
 
 ## Zod Schema Metadata (Shared Package)
 
-Rich docs start in `@stack/schemas`. Every field gets `.describe()`; every schema gets a root `.openapi({ example: *Example })`:
+Rich docs start in `@saas-kit/schemas`. Every field gets `.describe()`; every schema gets a root `.meta({ example: *Example })`:
 
 ```ts
-// packages/schemas/src/user.ts — see "Request & Response Meta Examples" above for full pattern
-export const CreateUserExample = { email: "jane@example.com", name: "Jane Doe" } as const;
+// packages/schemas/src/user/user.schema.ts — see "Request & Response Meta Examples" above for full pattern
+export const CreateUserExample = {
+  email: 'jane@example.com',
+  name: 'Jane Doe',
+} as const;
 
-export const CreateUserSchema = z.object({
-  email: z.string().email().describe("User's login email address"),
-  name: z.string().min(1).describe("Display name shown in the UI"),
-}).openapi({ example: CreateUserExample });
+export const CreateUserSchema = z
+  .object({
+    email: z.string().email().describe("User's login email address"),
+    name: z.string().min(1).describe('Display name shown in the UI'),
+  })
+  .meta({ example: CreateUserExample });
 ```
 
 - **ALWAYS** export a `*Example` constant for every request and response schema.
-- **ALWAYS** attach `.openapi({ example: *Example })` on the **root** schema object.
+- **ALWAYS** attach `.meta({ example: *Example })` on the **root** schema object.
 - **ALWAYS** add `.describe()` on every field and on the root schema.
 - List/collection responses **ALWAYS** include `meta` (pagination) in the example.
 
@@ -239,13 +237,13 @@ Create DTO classes from shared schemas — one per request/response shape:
 
 ```ts
 // modules/user/dto/create-user.dto.ts
-import { createZodDto } from "nestjs-zod";
-import { CreateUserSchema } from "@stack/schemas";
+import { createZodDto } from 'nestjs-zod';
+import { CreateUserSchema } from '@saas-kit/schemas';
 export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 
 // modules/user/dto/user-response.dto.ts
-import { createZodDto } from "nestjs-zod";
-import { UserSchema } from "@stack/schemas";
+import { createZodDto } from 'nestjs-zod';
+import { UserSchema } from '@saas-kit/schemas';
 export class UserResponseDto extends createZodDto(UserSchema) {}
 ```
 
@@ -255,11 +253,11 @@ Re-export from `dto/index.ts`. Use response DTOs in `@ApiOkResponse({ type: User
 
 Rich documentation applies **equally** to all routes regardless of auth:
 
-| Auth level | Decorator | Documentation requirement |
-| ---------- | --------- | ------------------------- |
-| Private (default) | — (global `AuthGuard`) | Full docs + `@ApiUnauthorizedResponse` + `@ApiForbiddenResponse` when CASL applies |
-| Public | `@AllowAnonymous()` | **Same full docs** — `@ApiOperation`, typed response, `*Example`, params/queries. State "No authentication required" in description. Omit `401`/`403` only when truly impossible |
-| Optional | `@OptionalAuth()` | Full docs for both modes. Document differing response shapes with separate examples if they differ |
+| Auth level        | Decorator              | Documentation requirement                                                                                                                                                        |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Private (default) | — (global `AuthGuard`) | Full docs + `@ApiUnauthorizedResponse` + `@ApiForbiddenResponse` when CASL applies                                                                                               |
+| Public            | `@AllowAnonymous()`    | **Same full docs** — `@ApiOperation`, typed response, `*Example`, params/queries. State "No authentication required" in description. Omit `401`/`403` only when truly impossible |
+| Optional          | `@OptionalAuth()`      | Full docs for both modes. Document differing response shapes with separate examples if they differ                                                                               |
 
 - **NEVER** give public endpoints a lighter documentation pass — they are often the first integration point for new clients.
 - **NEVER** skip `@ApiBody`, `*Example`, or typed `@ApiOkResponse` on `@AllowAnonymous()` routes that accept a body or return data.
@@ -271,31 +269,31 @@ Every endpoint must include the decorators below. Omitting them is incomplete wo
 
 ### Required per endpoint
 
-| Decorator | Purpose |
-| --------- | ------- |
-| `@ApiOperation` | `summary` (short) + `description` (behavior, side effects, auth requirements) |
-| `@ApiBody` | Request body with `examples.default.value` from shared `*Example` |
+| Decorator                                                 | Purpose                                                                           |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `@ApiOperation`                                           | `summary` (short) + `description` (behavior, side effects, auth requirements)     |
+| `@ApiBody`                                                | Request body with `examples.default.value` from shared `*Example`                 |
 | `@ApiResponse` / `@ApiOkResponse` / `@ApiCreatedResponse` | Success response with `type` DTO **and** `content.example` from shared `*Example` |
-| `@ApiBadRequestResponse` | Validation failures (`400`) |
-| `@ApiUnauthorizedResponse` | Missing/invalid session (`401`) — **private endpoints only** |
-| `@ApiForbiddenResponse` | Insufficient permissions (`403`) — **private endpoints with CASL only** |
-| `@ApiNotFoundResponse` | Resource not found (`404`) — when applicable |
-| `@ApiParam` / `@ApiQuery` | Every non-obvious path param and query param |
+| `@ApiBadRequestResponse`                                  | Validation failures (`400`)                                                       |
+| `@ApiUnauthorizedResponse`                                | Missing/invalid session (`401`) — **private endpoints only**                      |
+| `@ApiForbiddenResponse`                                   | Insufficient permissions (`403`) — **private endpoints with CASL only**           |
+| `@ApiNotFoundResponse`                                    | Resource not found (`404`) — when applicable                                      |
+| `@ApiParam` / `@ApiQuery`                                 | Every non-obvious path param and query param                                      |
 
 ### Required per controller
 
-| Decorator | Purpose |
-| --------- | ------- |
-| `@ApiTags("{module}")` | Singular module name — `user`, `order-item` |
+| Decorator                                     | Purpose                                              |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `@ApiTags("{module}")`                        | Singular module name — `user`, `order-item`          |
 | `@ApiCookieAuth("better-auth.session_token")` | When routes require session (default — global guard) |
 
 ### Auth visibility in docs
 
-| Route type | Swagger note |
-| ---------- | ------------ |
-| Private (default) | Full docs + `@ApiUnauthorizedResponse`; add `@ApiForbiddenResponse` when CASL applies |
+| Route type          | Swagger note                                                                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Private (default)   | Full docs + `@ApiUnauthorizedResponse`; add `@ApiForbiddenResponse` when CASL applies                                                                                                      |
 | `@AllowAnonymous()` | **Full docs required** — typed response, `*Example`, params. State "No authentication required" in `@ApiOperation` description. Skip `401`/`403` unless the endpoint can still return them |
-| `@OptionalAuth()` | Full docs; document both authenticated and anonymous response examples if shapes differ |
+| `@OptionalAuth()`   | Full docs; document both authenticated and anonymous response examples if shapes differ                                                                                                    |
 
 ### Full example
 
@@ -312,67 +310,81 @@ import {
   ApiNotFoundResponse,
   ApiParam,
   ApiCookieAuth,
-} from "@nestjs/swagger";
-import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { CreateUserExample, UserExample, UserStatsExample } from "@stack/schemas";
-import { CreateUserDto, UserResponseDto, UserStatsResponseDto } from "./dto";
+} from '@nestjs/swagger';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import {
+  CreateUserExample,
+  UserExample,
+  UserStatsExample,
+} from '@saas-kit/schemas';
+import { CreateUserDto, UserResponseDto, UserStatsResponseDto } from './dto';
 
-@ApiTags("user")
-@ApiCookieAuth("better-auth.session_token")
-@Controller("users")
+@ApiTags('user')
+@ApiCookieAuth('better-auth.session_token')
+@Controller('users')
 export class UserController {
-  @Get(":id")
+  @Get(':id')
   @ApiOperation({
-    summary: "Get user by ID",
+    summary: 'Get user by ID',
     description:
-      "Returns a single user by UUID. Requires an authenticated session. " +
-      "Returns 403 if the caller lacks read permission on this user.",
+      'Returns a single user by UUID. Requires an authenticated session. ' +
+      'Returns 403 if the caller lacks read permission on this user.',
   })
-  @ApiParam({ name: "id", description: "User UUID", example: "550e8400-e29b-41d4-a716-446655440000" })
+  @ApiParam({
+    name: 'id',
+    description: 'User UUID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @ApiOkResponse({
     type: UserResponseDto,
-    description: "User found",
-    content: { "application/json": { example: UserExample } },
+    description: 'User found',
+    content: { 'application/json': { example: UserExample } },
   })
-  @ApiUnauthorizedResponse({ description: "No valid session" })
-  @ApiForbiddenResponse({ description: "Insufficient permissions" })
-  @ApiNotFoundResponse({ description: "User does not exist" })
-  findOne(@Param("id") id: string) {
+  @ApiUnauthorizedResponse({ description: 'No valid session' })
+  @ApiForbiddenResponse({ description: 'Insufficient permissions' })
+  @ApiNotFoundResponse({ description: 'User does not exist' })
+  findOne(@Param('id') id: string) {
     return this.findOneUser.execute(id);
   }
 
   @Post()
   @ApiOperation({
-    summary: "Create user",
-    description: "Creates a new user account. Returns the created user with 201 status.",
+    summary: 'Create user',
+    description:
+      'Creates a new user account. Returns the created user with 201 status.',
   })
   @ApiCreatedResponse({
     type: UserResponseDto,
-    description: "User created successfully",
-    content: { "application/json": { example: UserExample } },
+    description: 'User created successfully',
+    content: { 'application/json': { example: UserExample } },
   })
-  @ApiBody({ type: CreateUserDto, examples: { default: { value: CreateUserExample } } })
-  @ApiBadRequestResponse({ description: "Invalid request body — see validation errors" })
-  @ApiUnauthorizedResponse({ description: "No valid session" })
-  @ApiForbiddenResponse({ description: "Insufficient permissions" })
+  @ApiBody({
+    type: CreateUserDto,
+    examples: { default: { value: CreateUserExample } },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request body — see validation errors',
+  })
+  @ApiUnauthorizedResponse({ description: 'No valid session' })
+  @ApiForbiddenResponse({ description: 'Insufficient permissions' })
   create(@Body() body: CreateUserDto) {
     return this.createUser.execute(body);
   }
 
-  @Get("public/stats")
+  @Get('public/stats')
   @AllowAnonymous()
   @ApiOperation({
-    summary: "Public user statistics",
+    summary: 'Public user statistics',
     description:
-      "No authentication required. Returns aggregate user counts only — no PII. " +
-      "Safe to call from unauthenticated clients and health dashboards.",
+      'No authentication required. Returns aggregate user counts only — no PII. ' +
+      'Safe to call from unauthenticated clients and health dashboards.',
   })
   @ApiOkResponse({
     type: UserStatsResponseDto,
-    description: "Aggregate statistics",
-    content: { "application/json": { example: UserStatsExample } },
+    description: 'Aggregate statistics',
+    content: { 'application/json': { example: UserStatsExample } },
   })
-  @ApiBadRequestResponse({ description: "Invalid query parameters" })
+  @ApiBadRequestResponse({ description: 'Invalid query parameters' })
   stats() {
     return this.getUserStats.execute();
   }
@@ -381,32 +393,7 @@ export class UserController {
 
 ## Error Response Shape
 
-Document a consistent error envelope across all endpoints:
-
-```ts
-// shared/docs/api-error.schema.ts
-import { z } from "zod";
-import { createZodDto } from "nestjs-zod";
-
-export const ApiErrorExample = {
-  statusCode: 400,
-  message: ["email must be a valid email"],
-  error: "Bad Request",
-} as const;
-
-export const ApiErrorSchema = z
-  .object({
-    statusCode: z.number().describe("HTTP status code"),
-    message: z.union([z.string(), z.array(z.string())]).describe("Error message or validation errors"),
-    error: z.string().optional().describe("HTTP error name"),
-  })
-  .openapi({ example: ApiErrorExample });
-
-export class ApiErrorDto extends createZodDto(ApiErrorSchema) {}
-```
-
-- Reference `ApiErrorDto` in `@ApiBadRequestResponse`, `@ApiUnauthorizedResponse`, etc.
-- Global exception filter must return this shape — docs and runtime must match.
+Document a consistent Nest HTTP exception envelope on endpoints that can fail (`statusCode`, `message`, `error`). Keep that schema with the exception filter when one exists — **NEVER** in `shared/swagger/`.
 
 ## Query Params & Pagination
 
@@ -428,11 +415,11 @@ findAll(@Query() query: ListUsersDto) { ... }
 Configure in `modules/auth/lib/auth.ts`:
 
 ```ts
-import { betterAuth } from "better-auth";
-import { openAPI } from "better-auth/plugins";
+import { betterAuth } from 'better-auth';
+import { openAPI } from 'better-auth/plugins';
 
 export const auth = betterAuth({
-  basePath: "/api/auth",
+  basePath: '/api/auth',
   trustedOrigins: [process.env.CLIENT_URL!],
   plugins: [
     openAPI({
@@ -444,11 +431,11 @@ export const auth = betterAuth({
 });
 ```
 
-| Resource | URL |
-| -------- | --- |
-| Scalar UI (interactive) | `/api/auth/reference` |
-| OpenAPI JSON | `/api/auth/open-api/generate-schema` |
-| Programmatic | `await auth.api.generateOpenAPISchema()` |
+| Resource                | URL                                      |
+| ----------------------- | ---------------------------------------- |
+| Scalar UI (interactive) | `/api/auth/reference`                    |
+| OpenAPI JSON            | `/api/auth/open-api/generate-schema`     |
+| Programmatic            | `await auth.api.generateOpenAPISchema()` |
 
 - Endpoints grouped by plugin name; core routes under `Default`, models under `Models`.
 - Adding a better-auth plugin (admin, organization, etc.) auto-updates the auth reference.
@@ -460,22 +447,25 @@ export const auth = betterAuth({
 Combine app + auth docs in one Scalar UI with multiple sources:
 
 ```ts
-// shared/docs/setup-scalar.ts (optional — replaces or supplements Swagger UI)
-import { apiReference } from "@scalar/nestjs-api-reference";
+// optional — not in shared/swagger/
+import { apiReference } from '@scalar/nestjs-api-reference';
 
 app.use(
-  "/reference",
+  '/reference',
   apiReference({
-    pageTitle: "API Reference",
+    pageTitle: 'API Reference',
     sources: [
-      { url: "/docs-json", title: "Application API" },
-      { url: "/api/auth/open-api/generate-schema", title: "Authentication API" },
+      { url: '/api/docs-json', title: 'Application API' },
+      {
+        url: '/api/auth/open-api/generate-schema',
+        title: 'Authentication API',
+      },
     ],
   }),
 );
 ```
 
-- Application source: NestJS Swagger JSON at `/docs-json`.
+- Application source: NestJS Swagger JSON at `/api/docs-json`.
 - Auth source: better-auth generated schema.
 - When using Scalar, set `disableDefaultReference: true` on the `openAPI()` plugin if you want a single entry point.
 
@@ -489,18 +479,19 @@ Before marking an endpoint complete (applies to **private and public** routes):
 - [ ] Request body has `@ApiBody` with shared `*Example` as `examples.default.value`
 - [ ] Success response has `content["application/json"].example` from shared `*Example`
 - [ ] List responses include `meta` in the example (`page`, `limit`, `total`, `totalPages`)
-- [ ] Zod schemas export `*Example` with root `.openapi({ example })` on every request/response schema
+- [ ] Zod schemas export `*Example` with root `.meta({ example })` on every request/response schema
 - [ ] Auth requirement stated (`protected`, `@AllowAnonymous`, `@OptionalAuth`)
-- [ ] Shared error envelope used for error responses
-- [ ] `/docs-json` regenerates without manual schema edits
+- [ ] Error responses documented when the endpoint can return them
+- [ ] `/api/docs-json` regenerates without manual schema edits
 
 ## Rules
 
 - **NEVER** hand-write OpenAPI schemas that duplicate shared Zod schemas.
-- **NEVER** expose interactive docs in production without access control unless explicitly intended.
+- **NEVER** create `shared/docs/`, `shared/swagger/index.ts`, or a separate `swagger.config.ts`. Swagger setup is `shared/swagger/setup-swagger.ts` only.
+- **ALWAYS** serve `/api/docs` and `/api/docs-json` in development, staging, and production. Do **not** disable or gate them.
 - **NEVER** document sign-in/sign-up/session endpoints in NestJS Swagger — use `/api/auth/reference`.
 - **NEVER** ship an endpoint with only `@ApiTags` — partial docs are not acceptable on any route.
 - **NEVER** document private endpoints richly while leaving public endpoints sparse.
 - **ALWAYS** update docs when changing request/response shapes, status codes, or auth requirements.
 - **NEVER** ship a request or response schema without an exported `*Example` meta object.
-- **NEVER** inline example JSON in controllers — import `*Example` from `@stack/schemas`.
+- **NEVER** inline example JSON in controllers — import `*Example` from `@saas-kit/schemas`.

@@ -48,6 +48,8 @@ user.controller.spec.ts
 | Controller       | Routing, delegation to services, status codes      |
 | Guard/Hook       | Module-scoped guard behavior, auth hook side effects |
 | E2E              | Full HTTP round-trip, status codes, response shape |
+| `@saas-kit/schemas` | **Do not unit-test.** No specs in `packages/schemas`. Prove the contract at the consumer (controller spec, e2e HTTP). |
 
 - Prefer testing behavior over implementation details.
 - Do not test Prisma or NestJS framework internals.
+- **NEVER** add `*.spec.ts`, `*.test.ts`, or Jest config under `packages/schemas`.
