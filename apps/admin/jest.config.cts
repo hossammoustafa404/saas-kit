@@ -5,7 +5,7 @@ const createJestConfig = nextJest({
 });
 
 const config = {
-  displayName: '@org/admin',
+  displayName: '@saas-kit/admin',
   preset: '../../jest.preset.js',
   transform: {
     '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '@nx/react/plugins/jest',

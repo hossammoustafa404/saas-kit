@@ -4,9 +4,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/server with Nx",
+      "name": "Debug @saas-kit/server with Nx",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["nx", "serve", "@org/server"],
+      "runtimeArgs": ["nx", "serve", "@saas-kit/server"],
       "env": {
         "NODE_OPTIONS": "--inspect=9229"
       },

@@ -1,10 +1,10 @@
 {
-  "name": "@org/server-e2e",
+  "name": "@saas-kit/server-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "implicitDependencies": [
-      "@org/server"
+      "@saas-kit/server"
     ],
     "targets": {
       "e2e": {
@@ -13,8 +13,8 @@
           "{projectRoot}/test-output/jest/coverage"
         ],
         "dependsOn": [
-          "@org/server:build",
-          "@org/server:serve"
+          "@saas-kit/server:build",
+          "@saas-kit/server:serve"
         ],
         "options": {
           "jestConfig": "apps/server-e2e/jest.config.cts",

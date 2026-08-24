@@ -53,3 +53,9 @@ test-output
 # Next.js
 .next
 out
+
+# Secrets
+.env
+
+# Prisma Client (generated)
+apps/server/src/shared/prisma/generated

@@ -97,7 +97,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.
 - Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`.
-- Shared infra: `shared/config/`, `shared/prisma/` — not inside feature modules.
+- Shared infra: `shared/config/`, `shared/prisma/` — not inside feature modules. **NEVER** `shared/index.ts`.
 
 ## Shared Schemas (Zod)
 
@@ -137,6 +137,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | NestJS config keys | `SCREAMING_SNAKE_CASE` | `DATABASE_URL` |
 
 - **NEVER** prefix server-only secrets with `NEXT_PUBLIC_`.
+- Server env Zod schema: `apps/server/src/shared/config/env.schema.ts` — **NEVER** `env.ts`, **NEVER** in `@stack/schemas`.
 
 ## Tests
 
@@ -147,7 +148,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Imports & Exports
 
-- Path aliases: `@/` for app root (per-app, not workspace-wide). Workspace packages use `@<scope>/{package}` — e.g. `@stack/schemas`. See `monorepo.md`.
-- **NEVER** use generic scopes like `@repo/`.
+- Path aliases: `@/` for app root (per-app, not workspace-wide). Apps use `@saas-kit/{app}` (`@saas-kit/web`, `@saas-kit/server`). Shared packages use `@stack/{package}` — e.g. `@stack/schemas`. See `monorepo.md`.
+- **NEVER** use generic scopes like `@org/` or `@repo/`.
 - Named exports by default. Default exports only for Next.js `page.tsx` / `layout.tsx` requirements.
 - Barrel re-exports use named exports — `export { UserCard } from "./user-card"`.

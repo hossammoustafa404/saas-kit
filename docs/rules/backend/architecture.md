@@ -9,13 +9,14 @@ src/
 ├── main.ts
 ├── app.module.ts
 ├── shared/
-│   ├── config/                   # Env validation, app config factories
+│   ├── config/                   # Env Zod schema + ConfigModule — not @stack/schemas
+│   │   ├── env.schema.ts         # DATABASE_URL, PORT, secrets — server-only
+│   │   └── config.module.ts
 │   ├── prisma/
 │   │   ├── prisma.module.ts
 │   │   └── prisma.service.ts
 │   ├── filters/                  # Global exception filters
-│   ├── pipes/                    # Global pipes (if not registered in main.ts)
-│   └── index.ts                  # Barrel — public shared API
+│   └── pipes/                    # Global pipes (if not registered in main.ts)
 └── modules/
     └── user/                     # Singular domain name
         ├── index.ts              # Public API — sole entry for external imports
@@ -46,6 +47,8 @@ src/
 - Each feature is a self-contained NestJS module with controller, action services, DTOs, and scoped guards/decorators.
 - Register feature modules in `app.module.ts` — do not nest feature modules inside each other unless there is a genuine parent/child domain relationship.
 - Infrastructure used by multiple modules (`prisma`, `config`) lives in `shared/` — not inside feature modules.
+- **NEVER** create `shared/index.ts`. Import from the concrete folder (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) stay required.
+- **NEVER** export env schemas from `@stack/schemas`. Server process config stays in `shared/config/`. HTTP contracts stay in `@stack/schemas`.
 
 ## Action Services (One Folder Per Action)
 

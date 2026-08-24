@@ -31,7 +31,7 @@ export default defineConfig({
   },
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npx nx run @org/admin:dev',
+    command: 'npx nx run @saas-kit/admin:dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     cwd: workspaceRoot,
