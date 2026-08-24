@@ -1,11 +1,14 @@
 # Validation: Zod + nestjs-zod
 
-All input validation uses Zod schemas from the shared schemas package. **NEVER** duplicate schemas in the backend.
+HTTP input/output validation uses Zod schemas from `@stack/schemas`. **NEVER** duplicate those API contracts in any app.
+
+Process env is **not** an API contract. Server env schemas live in `apps/server/src/shared/config/` only. **NEVER** put `DATABASE_URL`, `BETTER_AUTH_SECRET`, or any other server secret/config schema in `@stack/schemas`. Frontends must not be able to import them.
 
 ## Setup
 
 - Install `nestjs-zod` and register `ZodValidationPipe` globally in `main.ts`.
-- Import schemas and types from `@stack/schemas` — e.g. `CreateUserSchema`, `CreateUserInput`.
+- Import **HTTP** schemas and types from `@stack/schemas` — e.g. `CreateUserSchema`, `CreateUserInput`.
+- Import **env** schemas from `shared/config/env.schema.ts` — never from `@stack/schemas`. **NEVER** use `env.ts`.
 - **NEVER** use `class-validator` / `class-transformer` DTOs when a shared Zod schema exists.
 
 ## DTO Pattern

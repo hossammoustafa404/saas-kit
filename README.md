@@ -30,6 +30,32 @@ These targets are either [inferred automatically](https://nx.dev/docs/concepts/i
 
 [More about running tasks in the docs &raquo;](https://nx.dev/docs/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 
+## Prisma (`server`)
+
+The API uses Prisma 7 against local PostgreSQL (`localhost:5432`, database `saas_kit`). Copy `apps/server/.env.example` to `apps/server/.env` and set `DATABASE_URL`. Create the database if it does not exist. Do not commit `.env`.
+
+Run Prisma through Nx from the workspace root so `cwd` is `apps/server`:
+
+```sh
+npx nx run server:prisma-generate
+npx nx run server:prisma-migrate
+npx nx run server:prisma-seed
+npx nx run server:prisma-studio
+```
+
+| Target | What it does |
+| --- | --- |
+| `prisma-generate` | Generates the Prisma Client into `apps/server/src/shared/prisma/generated/` (gitignored). `build` and `test` depend on this target. |
+| `prisma-migrate` | Runs `prisma migrate dev`. Add the first migration when the first model is added — do not commit an empty baseline. |
+| `prisma-seed` | Runs `prisma db seed` (`src/shared/prisma/seed.ts`). Not part of `build`. Prisma 7 does not seed automatically after migrate. |
+| `prisma-studio` | Opens Prisma Studio. |
+
+Then serve the API:
+
+```sh
+npx nx serve server
+```
+
 ## Versioning and releasing
 
 To version and release the library use

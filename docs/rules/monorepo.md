@@ -17,12 +17,12 @@ The codebase is an **Nx monorepo**. Nx orchestrates builds, tests, and lint acro
 └── tsconfig.base.json        # Path mappings for all projects
 ```
 
-| Path               | Nx project   | Import name         | Purpose                       |
-| ------------------ | ------------ | ------------------- | ----------------------------- |
-| `apps/web`  | `web` | `@/` (app-internal) | Client-facing Next.js app     |
-| `apps/admin`   | `admin`  | `@/` (app-internal) | Admin dashboard Next.js app   |
-| `apps/server`  | `server` | `@/` (app-internal) | NestJS API server             |
-| `packages/schemas` | `schemas`    | `@stack/schemas`    | Shared contracts for all apps |
+| Path               | Nx project           | Import name         | Purpose                       |
+| ------------------ | -------------------- | ------------------- | ----------------------------- |
+| `apps/web`         | `@saas-kit/web`      | `@/` (app-internal) | Client-facing Next.js app     |
+| `apps/admin`       | `@saas-kit/admin`    | `@/` (app-internal) | Admin dashboard Next.js app   |
+| `apps/server`      | `@saas-kit/server`   | `@/` (app-internal) | NestJS API server             |
+| `packages/schemas` | `@stack/schemas`     | `@stack/schemas`    | Shared contracts for all apps |
 
 - **NEVER** put application code at the workspace root.
 - **NEVER** create `libs/` at root unless matching an existing Nx layout — prefer `packages/` for shared code.
@@ -87,7 +87,7 @@ Every project declares tags in `project.json`. Enforce via `@nx/eslint-plugin` `
 ```
 
 - **NEVER** add a dependency that violates tags — fix the architecture instead of disabling the lint rule.
-- **NEVER** use generic scopes like `@repo/` — workspace packages use `@stack/{package}`. See `naming-conventions.md`.
+- **NEVER** use generic scopes like `@org/` or `@repo/` — apps use `@saas-kit/{app}`; shared packages use `@stack/{package}`. See `naming-conventions.md`.
 - Frontends (`scope:client`, `scope:admin`) **cannot** depend on each other or on `scope:server`.
 
 ## Shared Package: `@stack/schemas`
@@ -102,8 +102,9 @@ packages/schemas/
 └── package.json              # "name": "@stack/schemas"
 ```
 
-- Export schemas, inferred types, and `*Example` meta objects from `src/index.ts`.
+- Export **HTTP** schemas, inferred types, and `*Example` meta objects from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`.
 - **NEVER** export internals — one barrel, named exports only.
+- **NEVER** put server env, secrets, or Prisma config schemas here (`DATABASE_URL`, `BETTER_AUTH_SECRET`, …). Those live in `apps/server/src/shared/config/` only. See `backend/validation.md`, `backend/security.md`.
 - All three apps depend on `@stack/schemas` via workspace dependency — not relative paths like `../../packages/schemas`.
 - When changing a schema, verify **web**, **admin**, and **server** still build and test before merging.
 
@@ -119,13 +120,13 @@ Use `nx` — not raw `npm run` inside app folders (except when debugging a singl
 
 ```bash
 # Single project
-nx build web
-nx build admin
-nx serve server
-nx test schemas
+nx build @saas-kit/web
+nx build @saas-kit/admin
+nx serve @saas-kit/server
+nx test @stack/schemas
 
 # All apps
-nx run-many -t lint test build -p web,admin,server
+nx run-many -t lint test build -p @saas-kit/web,@saas-kit/admin,@saas-kit/server
 
 # Only what changed (CI and pre-push)
 nx affected -t lint test build
@@ -136,7 +137,7 @@ nx affected -t lint test build
 | `nx affected -t lint`                              | Every commit — fast feedback                   |
 | `nx affected -t test`                              | Before PR — unit tests for touched projects    |
 | `nx affected -t build`                             | Before PR — compile all affected apps and libs |
-| `nx build web` / `admin` / `server` | When verifying a full app build                |
+| `nx build @saas-kit/web` / `@saas-kit/admin` / `@saas-kit/server` | When verifying a full app build |
 
 - Configure `targetDefaults` in `nx.json` for shared `inputs`, `cache`, and `dependsOn` (e.g. `build` depends on `^build`).
 - **NEVER** skip `nx affected` in CI — run only what changed to keep pipelines fast.
@@ -158,13 +159,17 @@ nx g @nx/js:lib schemas --directory=packages/schemas --importPath=@stack/schemas
 
 ## Adding Dependencies
 
-- **App runtime dependency**: add to the app's `package.json`, then install at root.
-- **Shared dev tooling** (eslint, typescript, nx): root `package.json` only.
-- **Lib consumed by apps**: add `"@stack/schemas": "workspace:*"` in the consuming app's `package.json`.
+This workspace uses a **single version policy** ([Nx: Dependency Management Strategies](https://nx.dev/docs/kb/dependency-management)): versions live in the **root** `package.json`. `npm install` at the repo root.
 
+- **Runtime package** (Prisma, Zod, Nest, Next, React, …): add it to the **root** `package.json` first, with one version for the whole repo.
+- The app that **imports** it also lists the **same version** in that app's `package.json` (`web` already does this for `next`/`react`). That keeps `nx graph` and `@nx/js:prune-lockfile` accurate. Do not invent a second version.
+- **Shared dev tooling** (`nx`, `eslint`, `typescript`, `jest`): root `package.json` only — never on an app.
+- **Workspace lib** (`@stack/schemas`): `"@stack/schemas": "*"` on each consuming app, package itself lists its runtime deps (e.g. `zod`) at the version pinned in root.
+
+- **NEVER** add a package only to an app and skip the root.
 - **NEVER** add a backend-only dependency to `web` or `admin`.
 - **NEVER** add a frontend-only dependency to `server` unless genuinely shared (rare).
-- UI libraries needed by both frontends belong in each app's `package.json` or a future shared `packages/ui` — not copied between apps.
+- UI libraries needed by both frontends belong in root + each frontend's `package.json`, or a future shared `packages/ui`.
 
 ## CI
 

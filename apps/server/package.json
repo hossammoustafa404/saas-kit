@@ -1,10 +1,46 @@
 {
-  "name": "@org/server",
+  "name": "@saas-kit/server",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "targets": {
+      "prisma-generate": {
+        "executor": "nx:run-commands",
+        "cache": true,
+        "inputs": [
+          "{projectRoot}/src/shared/prisma/schema.prisma",
+          "{projectRoot}/prisma.config.ts"
+        ],
+        "outputs": ["{projectRoot}/src/shared/prisma/generated"],
+        "options": {
+          "command": "npx prisma generate",
+          "cwd": "apps/server"
+        }
+      },
+      "prisma-migrate": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npx prisma migrate dev",
+          "cwd": "apps/server"
+        }
+      },
+      "prisma-seed": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npx prisma db seed",
+          "cwd": "apps/server"
+        }
+      },
+      "prisma-studio": {
+        "continuous": true,
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npx prisma studio",
+          "cwd": "apps/server"
+        }
+      },
       "build": {
+        "dependsOn": ["prisma-generate"],
         "executor": "nx:run-commands",
         "options": {
           "command": "webpack-cli build",
@@ -63,19 +99,20 @@
           "build"
         ],
         "options": {
-          "buildTarget": "@org/server:build",
-          "runBuildTargetDependencies": false
+          "buildTarget": "@saas-kit/server:build",
+          "runBuildTargetDependencies": true
         },
         "configurations": {
           "development": {
-            "buildTarget": "@org/server:build:development"
+            "buildTarget": "@saas-kit/server:build:development"
           },
           "production": {
-            "buildTarget": "@org/server:build:production"
+            "buildTarget": "@saas-kit/server:build:production"
           }
         }
       },
       "test": {
+        "dependsOn": ["prisma-generate"],
         "options": {
           "passWithNoTests": true
         }
@@ -84,13 +121,22 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
+    "dotenv": "^16.4.7",
+    "pg": "^8.23.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.0.0"
+    "@nestjs/testing": "^11.0.0",
+    "@types/pg": "^8.23.1",
+    "prisma": "^7.9.0",
+    "tsx": "^4.23.12"
   }
 }
