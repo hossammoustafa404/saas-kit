@@ -7,7 +7,6 @@ export function setupSwagger(app: INestApplication) {
     .setTitle('SaaS Kit API')
     .setDescription('REST API for application resources.')
     .setVersion('1.0')
-    .addServer('http://localhost:9000', 'Local')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

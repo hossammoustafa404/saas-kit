@@ -52,7 +52,6 @@ export function setupSwagger(app: INestApplication) {
       'REST API for application resources. Health is a process-up signal only.',
     )
     .setVersion('1.0')
-    .addServer('http://localhost:9000', 'Local')
     .addTag(
       'health',
       'Health signal that the API process is accepting HTTP. Does not report whether PostgreSQL or other dependencies are reachable.',
@@ -80,6 +79,7 @@ export function setupSwagger(app: INestApplication) {
 Do **not** add a cookie security scheme or a better-auth `/api/auth/reference` link until an auth module exists. When auth lands, add `.addCookieAuth("better-auth.session_token", …)` and document auth routes via better-auth Open API — not in Nest Swagger.
 
 - Call `setupSwagger(app)` from `main.ts` in **every** environment — development, staging, and production. Do **not** gate on `NODE_ENV` or any other flag. See `security.md`.
+- **NEVER** hardcode an absolute server URL in DocumentBuilder (e.g. `http://localhost:9000`). Omit `.addServer()` so Swagger UI "Try it out" uses the origin that served `/api/docs`.
 - Nest mounts Swagger outside the global prefix unless `useGlobalPrefix: true`. Docs must live at `/api/docs` and `/api/docs-json`.
 - `jsonDocumentUrl` exposes `/api/docs-json` (same spec, machine-readable) for generators and future UIs.
 - **NEVER** duplicate Zod shapes in `@ApiProperty()` — schemas flow from `createZodDto`. See `validation.md`.
@@ -489,6 +489,7 @@ Before marking an endpoint complete (applies to **private and public** routes):
 - **NEVER** hand-write OpenAPI schemas that duplicate shared Zod schemas.
 - **NEVER** create `shared/docs/`, `shared/swagger/index.ts`, or a separate `swagger.config.ts`. Swagger setup is `shared/swagger/setup-swagger.ts` only.
 - **ALWAYS** serve `/api/docs` and `/api/docs-json` in development, staging, and production. Do **not** disable or gate them.
+- **NEVER** hardcode an absolute OpenAPI server URL. Omit `.addServer()` so "Try it out" uses the serving origin.
 - **NEVER** document sign-in/sign-up/session endpoints in NestJS Swagger — use `/api/auth/reference`.
 - **NEVER** ship an endpoint with only `@ApiTags` — partial docs are not acceptable on any route.
 - **NEVER** document private endpoints richly while leaving public endpoints sparse.
