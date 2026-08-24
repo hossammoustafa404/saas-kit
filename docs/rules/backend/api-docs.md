@@ -68,6 +68,7 @@ export function setupSwagger(app: INestApplication) {
     jsonDocumentUrl: 'docs-json',
     swaggerOptions: {
       persistAuthorization: true,
+      withCredentials: true,
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
       docExpansion: 'list',
@@ -78,7 +79,8 @@ export function setupSwagger(app: INestApplication) {
 
 Do **not** add a cookie security scheme or a better-auth `/api/auth/reference` link until an auth module exists. When auth lands, add `.addCookieAuth("better-auth.session_token", …)` and document auth routes via better-auth Open API — not in Nest Swagger.
 
-- Call `setupSwagger(app)` from `main.ts` in **every** environment — development, staging, and production. Do **not** gate on `NODE_ENV` or any other flag. See `security.md`.
+- Call `setupSwagger(app)` from `main.ts` in **every** environment — development, staging, and production. Do **not** gate on `NODE_ENV` or any other flag.
+- Try it out is a live API call. It **must** send the session cookie (`swaggerOptions.withCredentials: true`) and is subject to the same AuthGuard and CASL checks as any other client. Unauthenticated callers cannot execute protected actions. See `security.md`.
 - **NEVER** hardcode an absolute server URL in DocumentBuilder (e.g. `http://localhost:9000`). Omit `.addServer()` so Swagger UI "Try it out" uses the origin that served `/api/docs`.
 - Nest mounts Swagger outside the global prefix unless `useGlobalPrefix: true`. Docs must live at `/api/docs` and `/api/docs-json`.
 - `jsonDocumentUrl` exposes `/api/docs-json` (same spec, machine-readable) for generators and future UIs.
@@ -453,6 +455,7 @@ Before marking an endpoint complete (applies to **private and public** routes):
 - **NEVER** hand-write OpenAPI schemas that duplicate shared Zod schemas.
 - **NEVER** create `shared/docs/`, `shared/swagger/index.ts`, or a separate `swagger.config.ts`. Swagger setup is `shared/swagger/setup-swagger.ts` only.
 - **ALWAYS** serve `/api/docs` and `/api/docs-json` in development, staging, and production. Do **not** disable or gate them.
+- **ALWAYS** set `swaggerOptions.withCredentials: true` so Try it out sends the session cookie. Protected actions require authentication — see `security.md`.
 - **NEVER** hardcode an absolute OpenAPI server URL. Omit `.addServer()` so "Try it out" uses the serving origin.
 - **NEVER** document sign-in/sign-up/session endpoints in NestJS Swagger — use `/api/auth/reference`.
 - **NEVER** ship an endpoint with only `@ApiTags` — partial docs are not acceptable on any route.

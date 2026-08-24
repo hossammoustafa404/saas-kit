@@ -19,6 +19,7 @@ export function setupSwagger(app: INestApplication) {
     jsonDocumentUrl: 'docs-json',
     swaggerOptions: {
       persistAuthorization: true,
+      withCredentials: true,
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
       docExpansion: 'list',

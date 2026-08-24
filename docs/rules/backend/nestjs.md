@@ -18,7 +18,7 @@
 - Register global exception filter from `shared/filters/`.
 - Enable CORS with allowed origins from config (`trustedOrigins` must align with better-auth).
 - Set a global prefix (e.g. `/api`) if required by clients.
-- Set up Swagger in every environment (`/api/docs` and `/api/docs-json`). Do not gate on `NODE_ENV`. See `api-docs.md`.
+- Set up Swagger in every environment (`/api/docs` and `/api/docs-json`). Do not gate on `NODE_ENV`. Try it out must send credentials and is subject to the same auth as the live API. See `api-docs.md`, `security.md`.
 
 ## Request Lifecycle
 

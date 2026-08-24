@@ -9,5 +9,15 @@
 - Rate-limit auth and sensitive endpoints at the gateway or via a NestJS throttler when needed.
 - Set security headers (helmet) and strict CORS origins in production.
 - Log auth failures and authorization denials — never log passwords, tokens, or PII in plain text.
-- Serve interactive API docs (`/api/docs` and `/api/docs-json`) in every environment, including production. Do not disable or gate them. See `api-docs.md`.
 - Conduct `<SECURITY_REVIEW>` for auth, input handling, payments, or PII.
+
+## Interactive API documentation
+
+Serve `/api/docs` and `/api/docs-json` in every environment. Call `setupSwagger(app)` unconditionally — do not disable them on `NODE_ENV`. See `api-docs.md`.
+
+Swagger UI is not a backdoor. **Try it out executes the live API** and must respect the same authentication and authorization as any other client. Protected operations require a valid session; an unauthenticated caller gets `401`. Only routes marked `@AllowAnonymous()` (e.g. Health) are callable without a session. See `authentication.md`, `authorization.md`.
+
+- **ALWAYS** send credentials from Swagger UI (`swaggerOptions.withCredentials: true`) so the better-auth session cookie is included on Try it out.
+- **ALWAYS** add `.addCookieAuth("better-auth.session_token")` on DocumentBuilder when the auth module exists.
+- **NEVER** let Try it out skip AuthGuard, CASL, or validation.
+- **NEVER** hide or password-protect `/api/docs` as a substitute for enforcing auth on the routes themselves.

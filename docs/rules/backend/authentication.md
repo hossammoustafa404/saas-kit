@@ -76,6 +76,7 @@ getProfile(@Session() session: UserSession) {
 ```
 
 - Apply `@AllowAnonymous()` on health checks and truly public endpoints.
+- Swagger UI Try it out is not exempt — it hits the live routes and the same global `AuthGuard`. See `api-docs.md`, `security.md`.
 - **NEVER** create a custom `AuthGuard` — use the library's global guard and decorators.
 - Session is also available via `req.session` and `req.user` on the request object.
 
