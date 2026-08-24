@@ -4,8 +4,10 @@ export const WEB_ORIGIN = 'http://localhost:3000';
 export const ADMIN_ORIGIN = 'http://localhost:3001';
 export const API_ORIGIN = 'http://localhost:9000';
 
-export const SEED_ADMIN_EMAIL = 'admin@example.com';
-export const SEED_ADMIN_PASSWORD = 'admin-password-for-local';
+export const SEED_ADMIN_EMAIL =
+  process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
+export const SEED_ADMIN_PASSWORD =
+  process.env.SEED_ADMIN_PASSWORD ?? 'password';
 
 export function uniqueCustomerEmail(): string {
   return `customer-${Date.now()}-${Math.round(Math.random() * 1_000_000)}@example.com`;

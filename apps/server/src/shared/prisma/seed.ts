@@ -39,7 +39,7 @@ async function seed(): Promise<void> {
   }
 }
 
-seed().catch(() => {
-  console.error('Seed failed');
+seed().catch((error: unknown) => {
+  console.error('Seed failed', error);
   process.exitCode = 1;
 });
