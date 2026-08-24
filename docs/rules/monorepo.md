@@ -11,7 +11,7 @@ The codebase is an **Nx monorepo**. Nx orchestrates builds, tests, and lint acro
 │   ├── admin/            # Next.js — internal admin dashboard — see frontend/
 │   └── server/           # NestJS — REST API — see backend/
 ├── packages/
-│   └── schemas/              # @stack/schemas — shared Zod schemas, types, *Example
+│   └── schemas/              # @saas-kit/schemas — shared Zod schemas and types
 ├── nx.json
 ├── package.json              # Root workspace scripts only — no app logic
 └── tsconfig.base.json        # Path mappings for all projects
@@ -22,7 +22,7 @@ The codebase is an **Nx monorepo**. Nx orchestrates builds, tests, and lint acro
 | `apps/web`         | `@saas-kit/web`      | `@/` (app-internal) | Client-facing Next.js app     |
 | `apps/admin`       | `@saas-kit/admin`    | `@/` (app-internal) | Admin dashboard Next.js app   |
 | `apps/server`      | `@saas-kit/server`   | `@/` (app-internal) | NestJS API server             |
-| `packages/schemas` | `@stack/schemas`     | `@stack/schemas`    | Shared contracts for all apps |
+| `packages/schemas` | `@saas-kit/schemas`     | `@saas-kit/schemas`    | Shared contracts for all apps |
 
 - **NEVER** put application code at the workspace root.
 - **NEVER** create `libs/` at root unless matching an existing Nx layout — prefer `packages/` for shared code.
@@ -56,7 +56,7 @@ packages    ──X──► apps           (libs never import apps)
 ```
 
 - Apps communicate over HTTP — never import source from another app.
-- Shared types, Zod schemas, and `*Example` meta objects live in `@stack/schemas` only. See `naming-conventions.md`, `backend/validation.md`, `backend/api-docs.md`.
+- Shared types and Zod schemas live in `@saas-kit/schemas` only. Examples stay on `.meta({ example })` — do not export `*Example` constants. See `naming-conventions.md`, `backend/validation.md`, `backend/api-docs.md`.
 - **NEVER** duplicate a schema or API contract inside any app when it belongs in `packages/schemas`.
 
 ## Nx Tags & Module Boundaries
@@ -87,31 +87,41 @@ Every project declares tags in `project.json`. Enforce via `@nx/eslint-plugin` `
 ```
 
 - **NEVER** add a dependency that violates tags — fix the architecture instead of disabling the lint rule.
-- **NEVER** use generic scopes like `@org/` or `@repo/` — apps use `@saas-kit/{app}`; shared packages use `@stack/{package}`. See `naming-conventions.md`.
+- **NEVER** use generic scopes like `@org/` or `@repo/` — apps use `@saas-kit/{app}`; shared packages use `@saas-kit/{package}`. See `naming-conventions.md`.
 - Frontends (`scope:client`, `scope:admin`) **cannot** depend on each other or on `scope:server`.
 
-## Shared Package: `@stack/schemas`
+## Shared Package: `@saas-kit/schemas`
 
 ```text
 packages/schemas/
 ├── src/
 │   ├── index.ts              # Public barrel — sole entry for consumers
-│   ├── user.ts               # UserSchema, User, UserExample, CreateUserSchema, …
-│   └── auth.ts
+│   ├── health/
+│   │   ├── index.ts          # Module barrel
+│   │   └── health.schema.ts  # HealthSchema, Health
+│   └── user/
+│       ├── index.ts
+│       ├── user.schema.ts
+│       └── create-user.schema.ts
 ├── project.json
-└── package.json              # "name": "@stack/schemas"
+└── package.json              # "name": "@saas-kit/schemas"
 ```
 
-- Export **HTTP** schemas, inferred types, and `*Example` meta objects from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`.
+- **ALWAYS** group contracts under `src/{module}/` matching the feature module name (singular `kebab-case`: `health/`, `user/`). One folder may contain multiple `{name}.schema.ts` files.
+- **ALWAYS** name contract files `{name}.schema.ts` (`health/health.schema.ts`, not `health.ts` or `src/health.schema.ts`). See `naming-conventions.md`.
+- **NEVER** place `*.schema.ts` at `src/` root — only `index.ts` lives there.
+- **NEVER** deep-import a schema file from an app (`@saas-kit/schemas/health/health.schema`). Consumers use the package barrel only.
+- Export **HTTP** schemas and inferred types from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`. **NEVER** export `*Example` constants from the barrel.
+- **NEVER** add `*.spec.ts`, `*.test.ts`, Jest config, or a test target in `packages/schemas`. Contracts are proven by consuming apps (server e2e, controller specs, form tests) — not by parsing examples in this package.
 - **NEVER** export internals — one barrel, named exports only.
 - **NEVER** put server env, secrets, or Prisma config schemas here (`DATABASE_URL`, `BETTER_AUTH_SECRET`, …). Those live in `apps/server/src/shared/config/` only. See `backend/validation.md`, `backend/security.md`.
-- All three apps depend on `@stack/schemas` via workspace dependency — not relative paths like `../../packages/schemas`.
+- All three apps depend on `@saas-kit/schemas` via workspace dependency — not relative paths like `../../packages/schemas`.
 - When changing a schema, verify **web**, **admin**, and **server** still build and test before merging.
 
 ## TypeScript Path Mapping
 
 - App-internal aliases (`@/`) are configured per app — point to that app's `src/`.
-- Cross-project imports use the package name: `import { UserSchema } from "@stack/schemas"`.
+- Cross-project imports use the package name: `import { UserSchema } from "@saas-kit/schemas"`.
 - Register workspace paths in root `tsconfig.base.json` — **NEVER** deep-link across projects with relative `../../` paths.
 
 ## Running Tasks
@@ -123,7 +133,7 @@ Use `nx` — not raw `npm run` inside app folders (except when debugging a singl
 nx build @saas-kit/web
 nx build @saas-kit/admin
 nx serve @saas-kit/server
-nx test @stack/schemas
+nx build @saas-kit/schemas
 
 # All apps
 nx run-many -t lint test build -p @saas-kit/web,@saas-kit/admin,@saas-kit/server
@@ -150,7 +160,7 @@ Use Nx generators to scaffold — match existing structure, do not hand-roll pro
 nx g @nx/next:app web
 nx g @nx/next:app admin
 nx g @nx/nest:application server
-nx g @nx/js:lib schemas --directory=packages/schemas --importPath=@stack/schemas
+nx g @nx/js:lib schemas --directory=packages/schemas --importPath=@saas-kit/schemas
 ```
 
 - After generating, add correct tags to `project.json` immediately.
@@ -164,7 +174,7 @@ This workspace uses a **single version policy** ([Nx: Dependency Management Stra
 - **Runtime package** (Prisma, Zod, Nest, Next, React, …): add it to the **root** `package.json` first, with one version for the whole repo.
 - The app that **imports** it also lists the **same version** in that app's `package.json` (`web` already does this for `next`/`react`). That keeps `nx graph` and `@nx/js:prune-lockfile` accurate. Do not invent a second version.
 - **Shared dev tooling** (`nx`, `eslint`, `typescript`, `jest`): root `package.json` only — never on an app.
-- **Workspace lib** (`@stack/schemas`): `"@stack/schemas": "*"` on each consuming app, package itself lists its runtime deps (e.g. `zod`) at the version pinned in root.
+- **Workspace lib** (`@saas-kit/schemas`): `"@saas-kit/schemas": "*"` on each consuming app, package itself lists its runtime deps (e.g. `zod`) at the version pinned in root.
 
 - **NEVER** add a package only to an app and skip the root.
 - **NEVER** add a backend-only dependency to `web` or `admin`.
@@ -183,7 +193,7 @@ nx affected -t lint test build --base=origin/main
 
 ## Rules
 
-- **NEVER** import from another app's `src/` — use `@stack/*` packages or HTTP.
+- **NEVER** import from another app's `src/` — use `@saas-kit/*` packages or HTTP.
 - **NEVER** bypass Nx project graph with ad-hoc relative imports across `apps/` or `packages/`.
 - **NEVER** commit changes to `packages/schemas` without verifying `web`, `admin`, and `server` still build and test.
 - **ALWAYS** use `nx affected` locally before opening a PR.

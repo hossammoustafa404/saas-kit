@@ -9,12 +9,14 @@ src/
 ├── main.ts
 ├── app.module.ts
 ├── shared/
-│   ├── config/                   # Env Zod schema + ConfigModule — not @stack/schemas
+│   ├── config/                   # Env Zod schema + ConfigModule — not @saas-kit/schemas
 │   │   ├── env.schema.ts         # DATABASE_URL, PORT, secrets — server-only
 │   │   └── config.module.ts
 │   ├── prisma/
 │   │   ├── prisma.module.ts
 │   │   └── prisma.service.ts
+│   ├── swagger/
+│   │   └── setup-swagger.ts      # DocumentBuilder + SwaggerModule.setup
 │   ├── filters/                  # Global exception filters
 │   └── pipes/                    # Global pipes (if not registered in main.ts)
 └── modules/
@@ -47,8 +49,9 @@ src/
 - Each feature is a self-contained NestJS module with controller, action services, DTOs, and scoped guards/decorators.
 - Register feature modules in `app.module.ts` — do not nest feature modules inside each other unless there is a genuine parent/child domain relationship.
 - Infrastructure used by multiple modules (`prisma`, `config`) lives in `shared/` — not inside feature modules.
-- **NEVER** create `shared/index.ts`. Import from the concrete folder (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) stay required.
-- **NEVER** export env schemas from `@stack/schemas`. Server process config stays in `shared/config/`. HTTP contracts stay in `@stack/schemas`.
+- **NEVER** create `shared/index.ts` or `shared/swagger/index.ts`. Import from the concrete file (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/swagger/setup-swagger`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) stay required.
+- **NEVER** create `shared/docs/`. Swagger lives in `shared/swagger/setup-swagger.ts` only — DocumentBuilder metadata stays in that file. **NEVER** split a `swagger.config.ts`. **NEVER** put error envelopes, Scalar, or other docs products in `shared/swagger/`.
+- **NEVER** export env schemas from `@saas-kit/schemas`. Server process config stays in `shared/config/`. HTTP contracts stay in `@saas-kit/schemas`.
 
 ## Action Services (One Folder Per Action)
 

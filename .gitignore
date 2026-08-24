@@ -59,3 +59,4 @@ out
 
 # Prisma Client (generated)
 apps/server/src/shared/prisma/generated
+.scratch/
