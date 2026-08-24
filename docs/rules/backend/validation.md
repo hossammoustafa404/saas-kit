@@ -34,23 +34,18 @@ export class CreateUserDto extends createZodDto(CreateUserSchema) {}
 
 ## OpenAPI Metadata & Meta Examples
 
-Every request and response schema in the shared package **must** export a co-located `*Example` constant and attach it to the root schema via `.meta({ example })`. See `api-docs.md`.
+Every request and response schema in the shared package **must** attach a complete JSON example on the root schema via `.meta({ example })`. Do **not** export a `*Example` constant. See `api-docs.md`.
 
 ```ts
-export const CreateUserExample = {
-  email: 'jane@example.com',
-  name: 'Jane Doe',
-} as const;
-
 export const CreateUserSchema = z
   .object({ email: z.string().email(), name: z.string().min(1) })
-  .meta({ example: CreateUserExample });
+  .meta({ example: { email: 'jane@example.com', name: 'Jane Doe' } });
 ```
 
 - Add `.describe()` on every field and on the root schema.
-- List responses must include a `meta` object in `*Example` (`page`, `limit`, `total`, `totalPages`).
+- List responses must include a `meta` object in the root `.meta({ example })` (`page`, `limit`, `total`, `totalPages`).
 - Create response DTOs with `createZodDto(ResponseSchema)` for `@ApiOkResponse({ type })`.
-- Controllers wire examples via `@ApiBody({ examples })` and `@ApiOkResponse({ content: { example } })` — import `*Example`, never inline JSON.
+- Controllers use DTO `type` only — OpenAPI takes the example from schema `.meta()`. **NEVER** export or import `*Example`.
 
 ## Shared Schema Contract
 

@@ -86,53 +86,32 @@ Do **not** add a cookie security scheme or a better-auth `/api/auth/reference` l
 
 ## Request & Response Meta Examples
 
-**Every request body and every response body must have a root-level meta example** — a complete, realistic JSON object exported alongside the schema. Field-level `.meta({ example })` alone is not sufficient.
+**Every request body and every response body must have a root-level `.meta({ example })`** — a complete, realistic JSON object on the Zod schema. That example flows into OpenAPI through `createZodDto`. Do **not** export a separate `*Example` constant from `@saas-kit/schemas`.
 
 ### Convention (`@saas-kit/schemas`)
 
-Co-locate schema, types, and examples in the same file:
+Co-locate schema and inferred type in the same file. Put the example only on `.meta({ example })`:
 
-| Export                 | Purpose                | Naming                             |
-| ---------------------- | ---------------------- | ---------------------------------- |
-| `*Schema`              | Zod schema             | `CreateUserSchema`                 |
-| `*Input` / domain noun | Inferred type          | `CreateUserInput`, `User`          |
-| `*Example`             | Full JSON meta example | `CreateUserExample`, `UserExample` |
+| Export                 | Purpose       | Naming                    |
+| ---------------------- | ------------- | ------------------------- |
+| `*Schema`              | Zod schema    | `CreateUserSchema`        |
+| `*Input` / domain noun | Inferred type | `CreateUserInput`, `User` |
 
 ```ts
 // packages/schemas/src/user/user.schema.ts
 import { z } from 'zod';
 
-// 1. Define meta example first (used by schema + controllers)
-export const CreateUserExample = {
-  email: 'jane@example.com',
-  name: 'Jane Doe',
-} as const;
-
-// 2. Schema with field descriptions + root example
 export const CreateUserSchema = z
   .object({
-    email: z
-      .string()
-      .email()
-      .describe("User's login email address")
-      .meta({ example: CreateUserExample.email }),
-    name: z
-      .string()
-      .min(1)
-      .describe('Display name shown in the UI')
-      .meta({ example: CreateUserExample.name }),
+    email: z.string().email().describe("User's login email address"),
+    name: z.string().min(1).describe('Display name shown in the UI'),
   })
   .describe('Payload for creating a new user')
-  .meta({ example: CreateUserExample });
+  .meta({
+    example: { email: 'jane@example.com', name: 'Jane Doe' },
+  });
 
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
-
-export const UserExample = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
-  email: 'jane@example.com',
-  name: 'Jane Doe',
-  createdAt: '2026-01-15T10:30:00.000Z',
-} as const;
 
 export const UserSchema = z
   .object({
@@ -142,26 +121,23 @@ export const UserSchema = z
     createdAt: z.string().datetime(),
   })
   .describe('User resource')
-  .meta({ example: UserExample });
+  .meta({
+    example: {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      email: 'jane@example.com',
+      name: 'Jane Doe',
+      createdAt: '2026-01-15T10:30:00.000Z',
+    },
+  });
 
 export type User = z.infer<typeof UserSchema>;
 ```
 
 ### Paginated / list responses
 
-List responses must include a `meta` object in the example:
+List response examples must include a `meta` object (`page`, `limit`, `total`, `totalPages`) inside `.meta({ example })`:
 
 ```ts
-export const UserListExample = {
-  data: [UserExample],
-  meta: {
-    page: 1,
-    limit: 20,
-    total: 142,
-    totalPages: 8,
-  },
-} as const;
-
 export const UserListSchema = z
   .object({
     data: z.array(UserSchema),
@@ -172,64 +148,62 @@ export const UserListSchema = z
       totalPages: z.number().int().nonnegative(),
     }),
   })
-  .meta({ example: UserListExample });
+  .meta({
+    example: {
+      data: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440000',
+          email: 'jane@example.com',
+          name: 'Jane Doe',
+          createdAt: '2026-01-15T10:30:00.000Z',
+        },
+      ],
+      meta: { page: 1, limit: 20, total: 142, totalPages: 8 },
+    },
+  });
 ```
 
 ### Wiring in controllers
 
-Reference the shared example in Swagger decorators — **import from `@saas-kit/schemas`, never inline**:
+Use the DTO from `createZodDto`. OpenAPI picks up the schema's `.meta({ example })` — do **not** re-declare examples on the controller and do **not** import `*Example` from `@saas-kit/schemas`.
 
 ```ts
-import {
-  CreateUserExample,
-  UserExample,
-  UserListExample,
-} from "@saas-kit/schemas";
-
 @Post()
-@ApiBody({ type: CreateUserDto, examples: { default: { value: CreateUserExample } } })
-@ApiCreatedResponse({
-  type: UserResponseDto,
-  content: { "application/json": { example: UserExample } },
-})
+@ApiBody({ type: CreateUserDto })
+@ApiCreatedResponse({ type: UserResponseDto })
 create(@Body() body: CreateUserDto) { ... }
 
 @Get()
-@ApiOkResponse({
-  type: UserListResponseDto,
-  content: { "application/json": { example: UserListExample } },
-})
+@ApiOkResponse({ type: UserListResponseDto })
 findAll() { ... }
 ```
 
-- Request bodies: `@ApiBody` with `examples.default.value` from `*Example`.
-- Success responses: `@ApiOkResponse` / `@ApiCreatedResponse` with `content["application/json"].example`.
+- Request bodies: `@ApiBody({ type: CreateUserDto })`.
+- Success responses: `@ApiOkResponse` / `@ApiCreatedResponse` with `type` DTO only.
 - Error responses: document status and description on the controller (`@ApiBadRequestResponse`, `@ApiUnauthorizedResponse`, etc.). Do **not** invent a shared error DTO under `shared/swagger/`.
-- **NEVER** inline example JSON in controllers — single source of truth is the shared package.
+- **NEVER** export `*Example` constants from `@saas-kit/schemas`.
+- **NEVER** duplicate example JSON in controllers.
 
 ## Zod Schema Metadata (Shared Package)
 
-Rich docs start in `@saas-kit/schemas`. Every field gets `.describe()`; every schema gets a root `.meta({ example: *Example })`:
+Rich docs start in `@saas-kit/schemas`. Every field gets `.describe()`; every schema gets a root `.meta({ example })`:
 
 ```ts
-// packages/schemas/src/user/user.schema.ts — see "Request & Response Meta Examples" above for full pattern
-export const CreateUserExample = {
-  email: 'jane@example.com',
-  name: 'Jane Doe',
-} as const;
-
-export const CreateUserSchema = z
+// packages/schemas/src/health/health.schema.ts — template for later schemas
+export const HealthSchema = z
   .object({
-    email: z.string().email().describe("User's login email address"),
-    name: z.string().min(1).describe('Display name shown in the UI'),
+    status: z.literal('ok').describe('Process is accepting HTTP requests'),
   })
-  .meta({ example: CreateUserExample });
+  .describe('Health signal that the API process is accepting HTTP')
+  .meta({ example: { status: 'ok' } });
+
+export type Health = z.infer<typeof HealthSchema>;
 ```
 
-- **ALWAYS** export a `*Example` constant for every request and response schema.
-- **ALWAYS** attach `.meta({ example: *Example })` on the **root** schema object.
+- **ALWAYS** attach `.meta({ example })` on the **root** schema object with a complete JSON example.
 - **ALWAYS** add `.describe()` on every field and on the root schema.
-- List/collection responses **ALWAYS** include `meta` (pagination) in the example.
+- **NEVER** export a `*Example` constant from `@saas-kit/schemas` (schema, type, and barrel).
+- List/collection responses **ALWAYS** include `meta` (pagination) in the root example.
 
 ## DTOs for Swagger
 
@@ -256,11 +230,11 @@ Rich documentation applies **equally** to all routes regardless of auth:
 | Auth level        | Decorator              | Documentation requirement                                                                                                                                                        |
 | ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Private (default) | — (global `AuthGuard`) | Full docs + `@ApiUnauthorizedResponse` + `@ApiForbiddenResponse` when CASL applies                                                                                               |
-| Public            | `@AllowAnonymous()`    | **Same full docs** — `@ApiOperation`, typed response, `*Example`, params/queries. State "No authentication required" in description. Omit `401`/`403` only when truly impossible |
+| Public            | `@AllowAnonymous()`    | **Same full docs** — `@ApiOperation`, typed response DTO, params/queries. State "No authentication required" in description. Omit `401`/`403` only when truly impossible |
 | Optional          | `@OptionalAuth()`      | Full docs for both modes. Document differing response shapes with separate examples if they differ                                                                               |
 
 - **NEVER** give public endpoints a lighter documentation pass — they are often the first integration point for new clients.
-- **NEVER** skip `@ApiBody`, `*Example`, or typed `@ApiOkResponse` on `@AllowAnonymous()` routes that accept a body or return data.
+- **NEVER** skip `@ApiBody` or typed `@ApiOkResponse` on `@AllowAnonymous()` routes that accept a body or return data.
 - `@ApiCookieAuth` on the controller documents the default; `@AllowAnonymous()` routes are still fully described — auth decorators on the class do not excuse sparse method-level docs.
 
 ## Controller Documentation Standard
@@ -272,8 +246,8 @@ Every endpoint must include the decorators below. Omitting them is incomplete wo
 | Decorator                                                 | Purpose                                                                           |
 | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `@ApiOperation`                                           | `summary` (short) + `description` (behavior, side effects, auth requirements)     |
-| `@ApiBody`                                                | Request body with `examples.default.value` from shared `*Example`                 |
-| `@ApiResponse` / `@ApiOkResponse` / `@ApiCreatedResponse` | Success response with `type` DTO **and** `content.example` from shared `*Example` |
+| `@ApiBody`                                                | Request body via `type` DTO (`createZodDto`) — example comes from schema `.meta()` |
+| `@ApiResponse` / `@ApiOkResponse` / `@ApiCreatedResponse` | Success response with `type` DTO — example comes from schema `.meta()`            |
 | `@ApiBadRequestResponse`                                  | Validation failures (`400`)                                                       |
 | `@ApiUnauthorizedResponse`                                | Missing/invalid session (`401`) — **private endpoints only**                      |
 | `@ApiForbiddenResponse`                                   | Insufficient permissions (`403`) — **private endpoints with CASL only**           |
@@ -292,7 +266,7 @@ Every endpoint must include the decorators below. Omitting them is incomplete wo
 | Route type          | Swagger note                                                                                                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Private (default)   | Full docs + `@ApiUnauthorizedResponse`; add `@ApiForbiddenResponse` when CASL applies                                                                                                      |
-| `@AllowAnonymous()` | **Full docs required** — typed response, `*Example`, params. State "No authentication required" in `@ApiOperation` description. Skip `401`/`403` unless the endpoint can still return them |
+| `@AllowAnonymous()` | **Full docs required** — typed response DTO, params. State "No authentication required" in `@ApiOperation` description. Skip `401`/`403` unless the endpoint can still return them |
 | `@OptionalAuth()`   | Full docs; document both authenticated and anonymous response examples if shapes differ                                                                                                    |
 
 ### Full example
@@ -312,11 +286,6 @@ import {
   ApiCookieAuth,
 } from '@nestjs/swagger';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
-import {
-  CreateUserExample,
-  UserExample,
-  UserStatsExample,
-} from '@saas-kit/schemas';
 import { CreateUserDto, UserResponseDto, UserStatsResponseDto } from './dto';
 
 @ApiTags('user')
@@ -338,7 +307,6 @@ export class UserController {
   @ApiOkResponse({
     type: UserResponseDto,
     description: 'User found',
-    content: { 'application/json': { example: UserExample } },
   })
   @ApiUnauthorizedResponse({ description: 'No valid session' })
   @ApiForbiddenResponse({ description: 'Insufficient permissions' })
@@ -356,11 +324,9 @@ export class UserController {
   @ApiCreatedResponse({
     type: UserResponseDto,
     description: 'User created successfully',
-    content: { 'application/json': { example: UserExample } },
   })
   @ApiBody({
     type: CreateUserDto,
-    examples: { default: { value: CreateUserExample } },
   })
   @ApiBadRequestResponse({
     description: 'Invalid request body — see validation errors',
@@ -382,7 +348,6 @@ export class UserController {
   @ApiOkResponse({
     type: UserStatsResponseDto,
     description: 'Aggregate statistics',
-    content: { 'application/json': { example: UserStatsExample } },
   })
   @ApiBadRequestResponse({ description: 'Invalid query parameters' })
   stats() {
@@ -474,12 +439,11 @@ app.use(
 Before marking an endpoint complete (applies to **private and public** routes):
 
 - [ ] `@ApiOperation` with summary **and** description
-- [ ] Success response typed with `createZodDto` response DTO
+- [ ] Success response typed with `createZodDto` DTO (`@ApiOkResponse` / `@ApiCreatedResponse`)
 - [ ] All applicable error responses documented (`400`, `401`, `403`, `404`)
-- [ ] Request body has `@ApiBody` with shared `*Example` as `examples.default.value`
-- [ ] Success response has `content["application/json"].example` from shared `*Example`
-- [ ] List responses include `meta` in the example (`page`, `limit`, `total`, `totalPages`)
-- [ ] Zod schemas export `*Example` with root `.meta({ example })` on every request/response schema
+- [ ] Request body uses `@ApiBody({ type })` when the endpoint accepts a body
+- [ ] List responses include `meta` in the schema root `.meta({ example })` (`page`, `limit`, `total`, `totalPages`)
+- [ ] Zod request/response schemas have root `.meta({ example })` — **no** exported `*Example` constant
 - [ ] Auth requirement stated (`protected`, `@AllowAnonymous`, `@OptionalAuth`)
 - [ ] Error responses documented when the endpoint can return them
 - [ ] `/api/docs-json` regenerates without manual schema edits
@@ -494,5 +458,6 @@ Before marking an endpoint complete (applies to **private and public** routes):
 - **NEVER** ship an endpoint with only `@ApiTags` — partial docs are not acceptable on any route.
 - **NEVER** document private endpoints richly while leaving public endpoints sparse.
 - **ALWAYS** update docs when changing request/response shapes, status codes, or auth requirements.
-- **NEVER** ship a request or response schema without an exported `*Example` meta object.
-- **NEVER** inline example JSON in controllers — import `*Example` from `@saas-kit/schemas`.
+- **ALWAYS** put a complete JSON example on the schema with root `.meta({ example })`.
+- **NEVER** export a `*Example` constant from `@saas-kit/schemas`.
+- **NEVER** duplicate example JSON on controllers (`content.example`, `@ApiBody({ examples })`).

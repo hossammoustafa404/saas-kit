@@ -11,7 +11,7 @@ The codebase is an **Nx monorepo**. Nx orchestrates builds, tests, and lint acro
 │   ├── admin/            # Next.js — internal admin dashboard — see frontend/
 │   └── server/           # NestJS — REST API — see backend/
 ├── packages/
-│   └── schemas/              # @saas-kit/schemas — shared Zod schemas, types, *Example
+│   └── schemas/              # @saas-kit/schemas — shared Zod schemas and types
 ├── nx.json
 ├── package.json              # Root workspace scripts only — no app logic
 └── tsconfig.base.json        # Path mappings for all projects
@@ -56,7 +56,7 @@ packages    ──X──► apps           (libs never import apps)
 ```
 
 - Apps communicate over HTTP — never import source from another app.
-- Shared types, Zod schemas, and `*Example` meta objects live in `@saas-kit/schemas` only. See `naming-conventions.md`, `backend/validation.md`, `backend/api-docs.md`.
+- Shared types and Zod schemas live in `@saas-kit/schemas` only. Examples stay on `.meta({ example })` — do not export `*Example` constants. See `naming-conventions.md`, `backend/validation.md`, `backend/api-docs.md`.
 - **NEVER** duplicate a schema or API contract inside any app when it belongs in `packages/schemas`.
 
 ## Nx Tags & Module Boundaries
@@ -111,7 +111,7 @@ packages/schemas/
 - **ALWAYS** name contract files `{name}.schema.ts` (`health/health.schema.ts`, not `health.ts` or `src/health.schema.ts`). See `naming-conventions.md`.
 - **NEVER** place `*.schema.ts` at `src/` root — only `index.ts` lives there.
 - **NEVER** deep-import a schema file from an app (`@saas-kit/schemas/health/health.schema`). Consumers use the package barrel only.
-- Export **HTTP** schemas, inferred types, and `*Example` meta objects from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`.
+- Export **HTTP** schemas and inferred types from `src/index.ts`. This package is API contracts shared by `web`, `admin`, and `server`. **NEVER** export `*Example` constants from the barrel.
 - **NEVER** add `*.spec.ts`, `*.test.ts`, Jest config, or a test target in `packages/schemas`. Contracts are proven by consuming apps (server e2e, controller specs, form tests) — not by parsing examples in this package.
 - **NEVER** export internals — one barrel, named exports only.
 - **NEVER** put server env, secrets, or Prisma config schemas here (`DATABASE_URL`, `BETTER_AUTH_SECRET`, …). Those live in `apps/server/src/shared/config/` only. See `backend/validation.md`, `backend/security.md`.

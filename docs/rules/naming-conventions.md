@@ -108,19 +108,19 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Schema module folder | singular `kebab-case` matching the feature | `health/`, `user/`, `order-item/` |
 | Schema file | `kebab-case` + `.schema.ts` inside the module folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
 | Schema export | `PascalCase` + `Schema` suffix | `LoginSchema`, `UserSchema` |
-| Meta example export | `PascalCase` + `Example` suffix | `CreateUserExample`, `UserExample` |
 | Inferred type export | `PascalCase` + `Input` / domain noun | `LoginInput`, `User` |
 | Partial/update schemas | verb or context prefix | `UpdateUserSchema`, `UpdateUserInput` |
 
-- Schema, inferred type, and `*Example` export live in the **same** `{name}.schema.ts` file.
+- Schema and inferred type live in the **same** `{name}.schema.ts` file. Examples live only on `.meta({ example })` — **NEVER** as an exported `*Example` constant.
 - **ALWAYS** put schema files in `packages/schemas/src/{module}/`. One module folder may hold multiple `{name}.schema.ts` files.
 - **ALWAYS** name shared-package files `{name}.schema.ts`.
+- **ALWAYS** put a complete JSON example on each request/response schema via root `.meta({ example })`. See `api-docs.md`.
 - **NEVER** put `*.schema.ts` at `packages/schemas/src/` root.
 - **NEVER** use a bare domain filename (`health.ts`, `user.ts`, `auth.ts`) in `packages/schemas`.
 - **NEVER** use `camelCase` for schema names — `LoginSchema`, not `loginSchema`.
 - **NEVER** suffix types with `Schema` — `LoginInput`, not `LoginSchemaType`.
 - **NEVER** define parallel interfaces for the same shape as a schema.
-- **NEVER** ship a request/response schema without a `*Example` meta object. See `api-docs.md`.
+- **NEVER** export `*Example` from a schema file or the package barrel.
 
 ## Database
 
