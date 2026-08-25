@@ -72,10 +72,19 @@ describe('POST /api/auth/sign-in/email', () => {
       const password = 'customer-password-1';
       await signUpCustomer({ origin: WEB_ORIGIN, email, password });
 
-      const res = await signIn({ email, password, origin: ADMIN_ORIGIN });
+      const [wrongOrigin, unknownEmail] = await Promise.all([
+        signIn({ email, password, origin: ADMIN_ORIGIN }),
+        signIn({
+          email: uniqueCustomerEmail(),
+          password,
+          origin: ADMIN_ORIGIN,
+        }),
+      ]);
 
-      expect(res.status).toBeGreaterThanOrEqual(400);
-      expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+      expect(wrongOrigin.status).toBe(401);
+      expect(unknownEmail.status).toBe(401);
+      expect(wrongOrigin.data).toEqual(unknownEmail.data);
+      expect(hasSessionCookie(wrongOrigin.headers['set-cookie'])).toBe(false);
     });
 
     it('should reject a Customer signing in from the admin origin even when email casing differs', async () => {
@@ -89,7 +98,7 @@ describe('POST /api/auth/sign-in/email', () => {
         origin: ADMIN_ORIGIN,
       });
 
-      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(res.status).toBe(401);
       expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
     });
 
@@ -105,14 +114,23 @@ describe('POST /api/auth/sign-in/email', () => {
   });
 
   it('should reject an Admin signing in from the web origin', async () => {
-    const res = await signIn({
-      email: SEED_ADMIN_EMAIL,
-      password: SEED_ADMIN_PASSWORD,
-      origin: WEB_ORIGIN,
-    });
+    const [wrongOrigin, unknownEmail] = await Promise.all([
+      signIn({
+        email: SEED_ADMIN_EMAIL,
+        password: SEED_ADMIN_PASSWORD,
+        origin: WEB_ORIGIN,
+      }),
+      signIn({
+        email: uniqueCustomerEmail(),
+        password: SEED_ADMIN_PASSWORD,
+        origin: WEB_ORIGIN,
+      }),
+    ]);
 
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+    expect(wrongOrigin.status).toBe(401);
+    expect(unknownEmail.status).toBe(401);
+    expect(wrongOrigin.data).toEqual(unknownEmail.data);
+    expect(hasSessionCookie(wrongOrigin.headers['set-cookie'])).toBe(false);
   });
 
   it('should sign in an Admin when Origin is the API', async () => {

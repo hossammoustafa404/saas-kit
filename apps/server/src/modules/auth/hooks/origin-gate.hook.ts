@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { BASE_ERROR_CODES } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import {
   type AuthHookContext,
@@ -48,9 +49,7 @@ export class OriginGateHook {
 
     const role: UserRole = user.role === 'admin' ? 'admin' : 'customer';
     if (!this.isSignInAllowed(this.classifyOrigin(ctx), role)) {
-      throw new APIError('FORBIDDEN', {
-        message: 'Sign-in is not allowed from this origin',
-      });
+      this.throwInvalidEmailOrPassword();
     }
   }
 
@@ -120,6 +119,13 @@ export class OriginGateHook {
     }
 
     return undefined;
+  }
+
+  private throwInvalidEmailOrPassword(): never {
+    throw APIError.from(
+      'UNAUTHORIZED',
+      BASE_ERROR_CODES.INVALID_EMAIL_OR_PASSWORD,
+    );
   }
 
   private ignoreClientRole(ctx: AuthHookContext): void {

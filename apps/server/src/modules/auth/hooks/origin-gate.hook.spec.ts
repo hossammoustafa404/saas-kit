@@ -7,13 +7,29 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
   BeforeHook: () => () => undefined,
 }));
 
+jest.mock('better-auth', () => ({
+  BASE_ERROR_CODES: {
+    INVALID_EMAIL_OR_PASSWORD: {
+      code: 'INVALID_EMAIL_OR_PASSWORD',
+      message: 'Invalid email or password',
+    },
+  },
+}));
+
 jest.mock('better-auth/api', () => ({
   APIError: class APIError extends Error {
     constructor(
       readonly status: string,
-      readonly body?: { message?: string },
+      readonly body?: { code?: string; message?: string },
     ) {
       super(body?.message ?? status);
+    }
+
+    static from(
+      status: string,
+      error: { code: string; message: string },
+    ): APIError {
+      return new APIError(status, error);
     }
   },
 }));
@@ -86,12 +102,12 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should reject an Admin signing in from the web origin', async () => {
+    it('should reject an Admin signing in from the web origin as invalid credentials', async () => {
       prisma.user.findUnique.mockResolvedValue({ role: 'admin' });
 
       await expect(
         hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'a@example.com' })),
-      ).rejects.toThrow(APIError);
+      ).rejects.toEqual(invalidCredentialsError());
     });
 
     it('should allow an Admin to sign in from the admin origin', async () => {
@@ -104,14 +120,14 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should reject a Customer signing in from the admin origin', async () => {
+    it('should reject a Customer signing in from the admin origin as invalid credentials', async () => {
       prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
 
       await expect(
         hook.beforeSignIn(
           createContext(ADMIN_ORIGIN, { email: 'c@example.com' }),
         ),
-      ).rejects.toThrow(APIError);
+      ).rejects.toEqual(invalidCredentialsError());
     });
 
     it('should reject a Customer signing in from the admin origin when email casing differs', async () => {
@@ -121,7 +137,7 @@ describe('OriginGateHook', () => {
         hook.beforeSignIn(
           createContext(ADMIN_ORIGIN, { email: '  C@Example.COM  ' }),
         ),
-      ).rejects.toThrow(APIError);
+      ).rejects.toEqual(invalidCredentialsError());
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'c@example.com' },
@@ -141,17 +157,34 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should reject sign-in from an untrusted origin', async () => {
+    it('should reject sign-in from an untrusted origin as invalid credentials', async () => {
       prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
 
       await expect(
         hook.beforeSignIn(
           createContext('https://evil.example', { email: 'c@example.com' }),
         ),
-      ).rejects.toThrow(APIError);
+      ).rejects.toEqual(invalidCredentialsError());
+    });
+
+    it('should not reject an unknown email so Better Auth can return invalid credentials', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        hook.beforeSignIn(
+          createContext(ADMIN_ORIGIN, { email: 'nobody@example.com' }),
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 });
+
+function invalidCredentialsError(): APIError {
+  return APIError.from('UNAUTHORIZED', {
+    code: 'INVALID_EMAIL_OR_PASSWORD',
+    message: 'Invalid email or password',
+  });
+}
 
 function createContext(
   origin: string | undefined,
