@@ -114,6 +114,21 @@ describe('OriginGateHook', () => {
       ).rejects.toThrow(APIError);
     });
 
+    it('should reject a Customer signing in from the admin origin when email casing differs', async () => {
+      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+
+      await expect(
+        hook.beforeSignIn(
+          createContext(ADMIN_ORIGIN, { email: '  C@Example.COM  ' }),
+        ),
+      ).rejects.toThrow(APIError);
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'c@example.com' },
+        select: { role: true },
+      });
+    });
+
     it('should allow either Role to sign in from tooling', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({ role: 'admin' });
       await expect(

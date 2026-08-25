@@ -13,9 +13,7 @@ export function uniqueCustomerEmail(): string {
   return `customer-${Date.now()}-${Math.round(Math.random() * 1_000_000)}@example.com`;
 }
 
-export function cookieHeader(
-  setCookie: string[] | string | undefined,
-): string {
+export function cookieHeader(setCookie: string[] | string | undefined): string {
   if (setCookie === undefined) {
     return '';
   }

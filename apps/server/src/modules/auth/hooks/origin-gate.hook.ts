@@ -115,7 +115,8 @@ export class OriginGateHook {
       'email' in body &&
       typeof body.email === 'string'
     ) {
-      return body.email;
+      const email = body.email.trim().toLowerCase();
+      return email === '' ? undefined : email;
     }
 
     return undefined;
