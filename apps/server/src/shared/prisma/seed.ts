@@ -18,9 +18,18 @@ async function seed(): Promise<void> {
   try {
     const existing = await prisma.user.findUnique({
       where: { email: seedAdmin.SEED_ADMIN_EMAIL },
-      select: { id: true },
+      select: { id: true, role: true, emailVerified: true },
     });
     if (existing) {
+      if (existing.role !== 'superadmin' || existing.emailVerified !== true) {
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            role: 'superadmin',
+            emailVerified: true,
+          },
+        });
+      }
       return;
     }
 
@@ -31,7 +40,8 @@ async function seed(): Promise<void> {
         email: seedAdmin.SEED_ADMIN_EMAIL,
         password: seedAdmin.SEED_ADMIN_PASSWORD,
         name: seedAdmin.SEED_ADMIN_NAME,
-        role: 'admin',
+        role: 'superadmin',
+        data: { emailVerified: true },
       },
     });
   } finally {

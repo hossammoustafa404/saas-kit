@@ -44,10 +44,10 @@ describe('POST /api/auth/sign-up/email', () => {
     expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
   });
 
-  it('should ignore a client-supplied Admin Role and still create a Customer', async () => {
+  it('should ignore a client-supplied Super Admin Role and still create a Customer', async () => {
     const res = await signUpCustomer({
       origin: WEB_ORIGIN,
-      role: 'admin',
+      role: 'superadmin',
     });
 
     expect(res.status).toBe(200);
@@ -102,7 +102,7 @@ describe('POST /api/auth/sign-in/email', () => {
       expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
     });
 
-  it('should sign in an Admin from the admin origin', async () => {
+  it('should sign in a Super Admin from the admin origin', async () => {
     const res = await signIn({
       email: SEED_ADMIN_EMAIL,
       password: SEED_ADMIN_PASSWORD,
@@ -110,10 +110,11 @@ describe('POST /api/auth/sign-in/email', () => {
     });
 
     expect(res.status).toBe(200);
+    expect(res.data.user.role).toBe('superadmin');
     expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
   });
 
-  it('should reject an Admin signing in from the web origin', async () => {
+  it('should reject a Super Admin signing in from the web origin', async () => {
     const [wrongOrigin, unknownEmail] = await Promise.all([
       signIn({
         email: SEED_ADMIN_EMAIL,
@@ -133,7 +134,7 @@ describe('POST /api/auth/sign-in/email', () => {
     expect(hasSessionCookie(wrongOrigin.headers['set-cookie'])).toBe(false);
   });
 
-  it('should sign in an Admin when Origin is the API', async () => {
+  it('should sign in a Super Admin when Origin is the API', async () => {
     const res = await signIn({
       email: SEED_ADMIN_EMAIL,
       password: SEED_ADMIN_PASSWORD,
@@ -141,6 +142,18 @@ describe('POST /api/auth/sign-in/email', () => {
     });
 
     expect(res.status).toBe(200);
+    expect(res.data.user.role).toBe('superadmin');
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
+  });
+
+  it('should sign in a Super Admin when Origin is missing', async () => {
+    const res = await signIn({
+      email: SEED_ADMIN_EMAIL,
+      password: SEED_ADMIN_PASSWORD,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.data.user.role).toBe('superadmin');
     expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
   });
 
