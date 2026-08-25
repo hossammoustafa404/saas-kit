@@ -132,6 +132,7 @@
     }
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.7.1",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
@@ -140,6 +141,8 @@
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "@saas-kit/schemas": "*",
+    "@thallesp/nestjs-better-auth": "^2.7.0",
+    "better-auth": "^1.7.1",
     "dotenv": "^16.4.7",
     "nestjs-zod": "^5.5.0",
     "pg": "^8.23.0",

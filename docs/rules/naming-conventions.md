@@ -146,11 +146,13 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 - **NEVER** prefix server-only secrets with `NEXT_PUBLIC_`.
 - Server env Zod schema: `apps/server/src/shared/config/env.schema.ts` — **NEVER** `env.ts`, **NEVER** in `@saas-kit/schemas`.
+- **NEVER** add `*.schema.spec.ts` (server env schemas included). See `backend/testing.md`.
 
 ## Tests
 
 - Unit/integration: `{source-name}.spec.ts` colocated beside source. Backend: **always** colocated — no `__tests__/`.
 - **NEVER** put specs in `packages/schemas` (`*.spec.ts`, `*.test.ts`, `jest.config.*`, `tsconfig.spec.json`).
+- **NEVER** add `*.schema.spec.ts` in `apps/server` or `packages/schemas`.
 - E2E: `e2e/{feature}/{flow}.spec.ts` — `e2e/auth/login-flow.spec.ts`.
 - Test description: behavior-driven — `it("should reject invalid email")`, not `it("test 1")`.
 - Factory/fixture helpers: `create` + noun — `createUser`, `createMockSession`.

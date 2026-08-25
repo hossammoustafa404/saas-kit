@@ -10,7 +10,7 @@ src/
 ├── app.module.ts
 ├── shared/
 │   ├── config/                   # Env Zod schema + ConfigModule — not @saas-kit/schemas
-│   │   ├── env.schema.ts         # DATABASE_URL, PORT, secrets — server-only
+│   │   ├── env.schema.ts         # DATABASE_URL, PORT, secrets — server-only; no spec
 │   │   └── config.module.ts
 │   ├── prisma/
 │   │   ├── prisma.module.ts

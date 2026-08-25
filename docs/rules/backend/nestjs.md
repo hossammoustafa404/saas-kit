@@ -7,7 +7,7 @@
 - Export services only when other modules need them via DI.
 - **ALWAYS** inject dependencies via constructor — never use `new` for services, guards, or hooks.
 - Import `ConfigModule` from `shared/config/` globally in `app.module.ts`. Access config via `ConfigService`, not `process.env` in services. **NEVER** import shared infra through a `shared/index.ts` barrel. Call `setupSwagger` from `shared/swagger/setup-swagger` — **NEVER** `shared/docs/`.
-- Validate env with a Zod schema colocated in `shared/config/env.schema.ts`. **NEVER** name it `env.ts`. **NEVER** put that schema in `@saas-kit/schemas`. See `validation.md`.
+- Validate env with a Zod schema colocated in `shared/config/env.schema.ts`. **NEVER** name it `env.ts`. **NEVER** put that schema in `@saas-kit/schemas`. **NEVER** add `env.schema.spec.ts`. See `validation.md`, `testing.md`.
 - Load `apps/server/.env` by path from the server project root — `nx serve` cwd is the workspace root, so `envFilePath: '.env'` will miss the file.
 - Use `Logger` from `@nestjs/common` with a context string matching the class name.
 

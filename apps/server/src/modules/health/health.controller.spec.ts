@@ -2,6 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import { GetHealthService } from './services';
 
+jest.mock('@thallesp/nestjs-better-auth', () => ({
+  AllowAnonymous: () => () => undefined,
+}));
+
 describe('HealthController', () => {
   let controller: HealthController;
   const getHealth = { execute: jest.fn() };

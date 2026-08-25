@@ -229,11 +229,11 @@ Re-export from `dto/index.ts`. Use response DTOs in `@ApiOkResponse({ type: User
 
 Rich documentation applies **equally** to all routes regardless of auth:
 
-| Auth level        | Decorator              | Documentation requirement                                                                                                                                                        |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Private (default) | — (global `AuthGuard`) | Full docs + `@ApiUnauthorizedResponse` + `@ApiForbiddenResponse` when CASL applies                                                                                               |
+| Auth level        | Decorator              | Documentation requirement                                                                                                                                                |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Private (default) | — (global `AuthGuard`) | Full docs + `@ApiUnauthorizedResponse` + `@ApiForbiddenResponse` when CASL applies                                                                                       |
 | Public            | `@AllowAnonymous()`    | **Same full docs** — `@ApiOperation`, typed response DTO, params/queries. State "No authentication required" in description. Omit `401`/`403` only when truly impossible |
-| Optional          | `@OptionalAuth()`      | Full docs for both modes. Document differing response shapes with separate examples if they differ                                                                               |
+| Optional          | `@OptionalAuth()`      | Full docs for both modes. Document differing response shapes with separate examples if they differ                                                                       |
 
 - **NEVER** give public endpoints a lighter documentation pass — they are often the first integration point for new clients.
 - **NEVER** skip `@ApiBody` or typed `@ApiOkResponse` on `@AllowAnonymous()` routes that accept a body or return data.
@@ -245,16 +245,16 @@ Every endpoint must include the decorators below. Omitting them is incomplete wo
 
 ### Required per endpoint
 
-| Decorator                                                 | Purpose                                                                           |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `@ApiOperation`                                           | `summary` (short) + `description` (behavior, side effects, auth requirements)     |
+| Decorator                                                 | Purpose                                                                            |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `@ApiOperation`                                           | `summary` (short) + `description` (behavior, side effects, auth requirements)      |
 | `@ApiBody`                                                | Request body via `type` DTO (`createZodDto`) — example comes from schema `.meta()` |
-| `@ApiResponse` / `@ApiOkResponse` / `@ApiCreatedResponse` | Success response with `type` DTO — example comes from schema `.meta()`            |
-| `@ApiBadRequestResponse`                                  | Validation failures (`400`)                                                       |
-| `@ApiUnauthorizedResponse`                                | Missing/invalid session (`401`) — **private endpoints only**                      |
-| `@ApiForbiddenResponse`                                   | Insufficient permissions (`403`) — **private endpoints with CASL only**           |
-| `@ApiNotFoundResponse`                                    | Resource not found (`404`) — when applicable                                      |
-| `@ApiParam` / `@ApiQuery`                                 | Every non-obvious path param and query param                                      |
+| `@ApiResponse` / `@ApiOkResponse` / `@ApiCreatedResponse` | Success response with `type` DTO — example comes from schema `.meta()`             |
+| `@ApiBadRequestResponse`                                  | Validation failures (`400`)                                                        |
+| `@ApiUnauthorizedResponse`                                | Missing/invalid session (`401`) — **private endpoints only**                       |
+| `@ApiForbiddenResponse`                                   | Insufficient permissions (`403`) — **private endpoints with CASL only**            |
+| `@ApiNotFoundResponse`                                    | Resource not found (`404`) — when applicable                                       |
+| `@ApiParam` / `@ApiQuery`                                 | Every non-obvious path param and query param                                       |
 
 ### Required per controller
 
@@ -265,11 +265,11 @@ Every endpoint must include the decorators below. Omitting them is incomplete wo
 
 ### Auth visibility in docs
 
-| Route type          | Swagger note                                                                                                                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Private (default)   | Full docs + `@ApiUnauthorizedResponse`; add `@ApiForbiddenResponse` when CASL applies                                                                                                      |
+| Route type          | Swagger note                                                                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Private (default)   | Full docs + `@ApiUnauthorizedResponse`; add `@ApiForbiddenResponse` when CASL applies                                                                                              |
 | `@AllowAnonymous()` | **Full docs required** — typed response DTO, params. State "No authentication required" in `@ApiOperation` description. Skip `401`/`403` unless the endpoint can still return them |
-| `@OptionalAuth()`   | Full docs; document both authenticated and anonymous response examples if shapes differ                                                                                                    |
+| `@OptionalAuth()`   | Full docs; document both authenticated and anonymous response examples if shapes differ                                                                                            |
 
 ### Full example
 
