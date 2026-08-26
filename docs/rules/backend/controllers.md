@@ -21,6 +21,7 @@
 ## Error Responses
 
 - Throw NestJS HTTP exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`).
+- **NEVER** return 4xx/5xx from a Nest handler by setting `res.statusCode` (or `@HttpCode(4xx)`) and returning a body. Failures throw; the observability exception filter logs them.
 - Never leak stack traces or internal details in production responses.
 - Map Zod validation failures to `400 Bad Request` via the global validation pipe.
 
