@@ -16,6 +16,14 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Callback props | prefix `on` | `onSubmit`, `onChange` |
 | Async functions | verb-first, no `async` prefix in name | `fetchUser`, not `asyncFetchUser` |
 
+- **ALWAYS** use `interface` for object shapes. Put module/feature-level ones in `interfaces/{name}.interface.ts` (`modules/{name}/interfaces/`, `features/{name}/interfaces/`). Shared infra uses `shared/{area}/interfaces/{name}.interface.ts`.
+- **NEVER** use `type` for an object shape (`type Foo = { ... }`). `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
+- **NEVER** declare object-shape interfaces in services, controllers, hooks, views, or other implementation files. Component-local props interfaces may stay colocated in the component file.
+- **NEVER** duplicate an `@saas-kit/schemas` contract as a local interface.
+- **ALWAYS** put `SCREAMING_SNAKE_CASE` constants in a `{name}.constants.ts` file on the server (`modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts`) and in `constants.ts` at a frontend feature root (`features/users/constants.ts`).
+- **NEVER** declare `SCREAMING_SNAKE_CASE` constants in services, controllers, hooks, components, views, or other implementation files.
+- **NEVER** create a `constants/` folder. One file per module, feature, or shared area.
+- Test fixtures may stay local to the spec. Production constants used in tests are imported from that area's constants file.
 - **NEVER** use abbreviations unless universally known (`id`, `url`, `api`).
 - **NEVER** use Hungarian notation or type suffixes (`strName`, `userArray`).
 - **NEVER** mix vocabulary for the same concept within a feature (`getUser` vs `fetchUserInfo` — pick one).
@@ -30,6 +38,10 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Hooks | `kebab-case` + `use-` prefix | `use-user-form.ts` |
 | Stores (Zustand) | `kebab-case` + `use-` prefix + `-store` | `use-user-store.ts` |
 | Utilities, services, config | `kebab-case.ts` | `define-ability.ts`, `auth-client.ts` |
+| Server constants | `{name}.constants.ts` | `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts` |
+| Frontend feature constants | `constants.ts` at the root | `features/users/constants.ts` |
+| Module/feature interfaces folder | `interfaces/` | `modules/auth/interfaces/`, `features/users/interfaces/` |
+| Interface file | `{name}.interface.ts` | `create-auth-options.interface.ts` |
 | Barrel files | `index.ts` | `components/index.ts` |
 | Test files | same as source + `.test` or `.spec` | `user.service.spec.ts` |
 | Shared schema folders | `kebab-case/` matching the feature module | `health/`, `user/` |
@@ -46,6 +58,8 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 - Feature folder: `kebab-case` matching the domain — `features/users/`, `features/order-items/`.
 - Root files inside a feature: `constants.ts`, `types.ts`, `utils.ts` — fixed names, lowercase.
+- **ALWAYS** put feature-level object-shape contracts in `interfaces/{name}.interface.ts` as `interface`. `types.ts` is for unions, aliases, and schema re-exports only.
+- **ALWAYS** put feature-level `SCREAMING_SNAKE_CASE` constants in `constants.ts`. **NEVER** declare them in other feature files.
 
 ### Components & Views
 
@@ -93,6 +107,9 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Controller file | `kebab-case.controller.ts` (singular) | `user.controller.ts` |
 | Action service folder | `{verb}-{resource}/` | `find-one-user/` |
 | Action service file | `{verb}-{resource}.service.ts` | `find-one-user/find-one-user.service.ts` |
+| Module constants file | `{name}.constants.ts` at module root | `auth.constants.ts` |
+| Interface file | `{name}.interface.ts` in `interfaces/` | `create-auth-options.interface.ts` |
+| Interface | `PascalCase` | `CreateAuthOptions` |
 | Controller spec | colocated beside controller | `user.controller.spec.ts` |
 | Constants file | `{module}.constants.ts` | `observability.constants.ts` |
 | Interface folder | `interfaces/` | `shared/observability/interfaces/` |
@@ -103,14 +120,16 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | DTO class | `PascalCase` + `Dto` | `CreateUserDto` |
 
 - Feature/module folder: `kebab-case`, **singular** — `user/`, `order-item/`.
+- Module constants: `{name}.constants.ts` at the module or shared-area root — `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts`. **NEVER** a bare `constants.ts` on the server.
+- Module interfaces: `interfaces/{name}.interface.ts` — `export interface CreateAuthOptions`. Import from `interfaces/index.ts` inside the module.
 - REST route paths: `kebab-case`, plural nouns — `/users`, `/order-items` (route plural, module singular).
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.
 - Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`, `observability.service.spec.ts`.
-- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/`, `shared/observability/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`. **NEVER** `shared/filters/` or `shared/interceptors/` — those kinds live in the owning module (`shared/observability/filters/`).
+- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/`, `shared/observability/`, `shared/queue/`, `shared/mail/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`. **NEVER** `shared/filters/` or `shared/interceptors/` — those kinds live in the owning module (`shared/observability/filters/`).
 - Shared infra service is named after the **module** (`ObservabilityService` next to `ObservabilityModule`), like `PrismaService`. Verb-resource names (`LogHttpOutcomeService`) are **only** for feature action services.
 - Injected constructor params are the class name in `camelCase`. Shared infra **keeps** the `Service` suffix: `observabilityService: ObservabilityService`. **NEVER** `observability`. Action services **drop** `Service` because the field is the use case: `findOneUser: FindOneUserService`.
-- Constants live in `{module}.constants.ts` at the module root (`observability.constants.ts`). Values inside remain `SCREAMING_SNAKE_CASE`.
+- Constants live in `{module}.constants.ts` at the module root (`observability.constants.ts`, `mail.constants.ts`). Values inside remain `SCREAMING_SNAKE_CASE`.
 - Internal object shapes that are not Zod HTTP contracts live in `interfaces/`. **ALWAYS** one exported `interface` per `{name}.interface.ts` file. Re-export from `interfaces/index.ts`. Import from that barrel.
 - **NEVER** `constants.ts` (bare name) in `apps/server`.
 - **NEVER** `types.ts` in `apps/server`.

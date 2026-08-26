@@ -13,6 +13,10 @@ jest.mock('better-auth', () => ({
       code: 'INVALID_EMAIL_OR_PASSWORD',
       message: 'Invalid email or password',
     },
+    USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: {
+      code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+      message: 'User already exists. Use another email.',
+    },
   },
 }));
 
@@ -52,10 +56,7 @@ describe('OriginGateHook', () => {
         BETTER_AUTH_URL: API_ORIGIN,
       })[key],
   };
-  const hook = new OriginGateHook(
-    prisma as never,
-    config as never,
-  );
+  const hook = new OriginGateHook(prisma as never, config as never);
 
   beforeEach(() => {
     prisma.user.findUnique.mockReset();
@@ -81,15 +82,50 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject sign-up from the admin origin', async () => {
-      await expect(hook.beforeSignUp(createContext(ADMIN_ORIGIN))).rejects.toThrow(
-        APIError,
-      );
+      await expect(
+        hook.beforeSignUp(createContext(ADMIN_ORIGIN)),
+      ).rejects.toThrow(APIError);
     });
 
     it('should reject sign-up from an untrusted origin', async () => {
       await expect(
         hook.beforeSignUp(createContext('https://evil.example')),
       ).rejects.toThrow(APIError);
+    });
+
+    it('should reject sign-up when the email is already registered', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 1n });
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: 'casey@example.com' }),
+        ),
+      ).rejects.toEqual(userAlreadyExistsError());
+    });
+
+    it('should reject sign-up when the existing email casing differs', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 1n });
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: '  Casey@Example.COM  ' }),
+        ),
+      ).rejects.toEqual(userAlreadyExistsError());
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'casey@example.com' },
+        select: { id: true },
+      });
+    });
+
+    it('should allow sign-up when the email is unknown', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: 'casey@example.com' }),
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -98,7 +134,9 @@ describe('OriginGateHook', () => {
       prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
 
       await expect(
-        hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'c@example.com' })),
+        hook.beforeSignIn(
+          createContext(WEB_ORIGIN, { email: 'c@example.com' }),
+        ),
       ).resolves.toBeUndefined();
     });
 
@@ -106,7 +144,9 @@ describe('OriginGateHook', () => {
       prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
 
       await expect(
-        hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'a@example.com' })),
+        hook.beforeSignIn(
+          createContext(WEB_ORIGIN, { email: 'a@example.com' }),
+        ),
       ).rejects.toEqual(invalidCredentialsError());
     });
 
@@ -148,7 +188,9 @@ describe('OriginGateHook', () => {
     it('should allow either Role to sign in from tooling', async () => {
       prisma.user.findUnique.mockResolvedValueOnce({ role: 'superadmin' });
       await expect(
-        hook.beforeSignIn(createContext(API_ORIGIN, { email: 'a@example.com' })),
+        hook.beforeSignIn(
+          createContext(API_ORIGIN, { email: 'a@example.com' }),
+        ),
       ).resolves.toBeUndefined();
 
       prisma.user.findUnique.mockResolvedValueOnce({ role: 'customer' });
@@ -177,7 +219,20 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe('beforePasswordReset', () => {
+    it('should reject forgotten password', async () => {
+      await expect(hook.beforePasswordReset()).rejects.toThrow(APIError);
+    });
+  });
 });
+
+function userAlreadyExistsError(): APIError {
+  return APIError.from('CONFLICT', {
+    code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+    message: 'User already exists. Use another email.',
+  });
+}
 
 function invalidCredentialsError(): APIError {
   return APIError.from('UNAUTHORIZED', {

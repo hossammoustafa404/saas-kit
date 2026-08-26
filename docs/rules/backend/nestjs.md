@@ -37,6 +37,8 @@
 
 ## Rules
 
+- **NEVER** declare object-shape `type` aliases or interfaces in services, controllers, or hooks. Put them in `modules/{name}/interfaces/` as `{name}.interface.ts`. See `architecture.md`, `naming-conventions.md`.
+- **NEVER** declare `SCREAMING_SNAKE_CASE` constants in services, controllers, or hooks. Put them in `modules/{name}/{name}.constants.ts` (or `shared/{area}/{area}.constants.ts`). See `architecture.md`, `naming-conventions.md`.
 - **NEVER** use `@Injectable()` services as static utility classes.
 - **NEVER** return Prisma records directly when they contain sensitive fields — map or use Zod output schemas.
 - **NEVER** catch errors silently. Log and rethrow or transform via exception filters.

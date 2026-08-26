@@ -7,6 +7,9 @@ export const EnvSchema = z.object({
   BETTER_AUTH_URL: z.url(),
   WEB_ORIGIN: z.url(),
   ADMIN_ORIGIN: z.url(),
+  REDIS_URL: z.url({ protocol: /^rediss?$/ }),
+  RESEND_API_KEY: z.string().min(1),
+  MAIL_FROM: z.email(),
   POSTHOG_API_KEY: z
     .string()
     .optional()

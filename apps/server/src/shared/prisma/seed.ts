@@ -33,7 +33,10 @@ async function seed(): Promise<void> {
       return;
     }
 
-    const auth = createAuth(prisma);
+    const auth = createAuth({
+      prisma,
+      mailQueue: { add: async () => undefined },
+    });
 
     await auth.api.createUser({
       body: {

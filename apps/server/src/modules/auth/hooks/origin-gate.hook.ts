@@ -30,6 +30,7 @@ export class OriginGateHook {
     }
 
     this.ignoreClientRole(ctx);
+    await this.rejectExistingEmail(ctx);
   }
 
   @BeforeHook('/sign-in/email')
@@ -102,6 +103,22 @@ export class OriginGateHook {
     return false;
   }
 
+  private async rejectExistingEmail(ctx: AuthHookContext): Promise<void> {
+    const email = this.emailFromBody(ctx);
+    if (!email) {
+      return;
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (user) {
+      this.throwUserAlreadyExists();
+    }
+  }
+
   private originFromContext(ctx: AuthHookContext): string | undefined {
     const origin = ctx.headers?.get('origin');
     return origin === null || origin === '' ? undefined : origin;
@@ -120,6 +137,13 @@ export class OriginGateHook {
     }
 
     return undefined;
+  }
+
+  private throwUserAlreadyExists(): never {
+    throw APIError.from(
+      'CONFLICT',
+      BASE_ERROR_CODES.USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL,
+    );
   }
 
   private throwInvalidEmailOrPassword(): never {

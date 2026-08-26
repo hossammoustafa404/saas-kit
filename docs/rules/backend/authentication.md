@@ -8,14 +8,14 @@ Authentication confirms **who** the user is. Use **`@thallesp/nestjs-better-auth
 src/
 └── modules/
     └── auth/
+        ├── auth.constants.ts
+        ├── interfaces/
+        │   └── create-auth-options.interface.ts
         ├── lib/
         │   └── auth.ts           # betterAuth({ ... }) instance
         ├── auth.module.ts
-        ├── hooks/
-        │   └── sign-up.hook.ts
-        └── services/
-            └── send-welcome-email/
-                └── send-welcome-email.service.ts
+        └── hooks/
+            └── origin-gate.hook.ts
 ```
 
 ## Setup
@@ -29,16 +29,16 @@ const app = await NestFactory.create(AppModule, { bodyParser: false });
 **2. Import `AuthModule` in `app.module.ts`:**
 
 ```ts
-import { AuthModule } from "@thallesp/nestjs-better-auth";
-import { auth } from "@/modules/auth/lib/auth";
+import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { auth } from '@/modules/auth/lib/auth';
 
 @Module({
   imports: [
     AuthModule.forRoot({
       auth,
       bodyParser: {
-        json: { limit: "2mb" },
-        urlencoded: { limit: "2mb", extended: true },
+        json: { limit: '2mb' },
+        urlencoded: { limit: '2mb', extended: true },
       },
     }),
   ],
@@ -55,10 +55,10 @@ export class AppModule {}
 
 `AuthModule` registers a global `AuthGuard`. All routes are protected unless opted out:
 
-| Decorator          | Behavior                                    |
-| ------------------ | ------------------------------------------- |
-| `@AllowAnonymous()`| No authentication required                  |
-| `@OptionalAuth()`  | Session attached when present, not required |
+| Decorator           | Behavior                                    |
+| ------------------- | ------------------------------------------- |
+| `@AllowAnonymous()` | No authentication required                  |
+| `@OptionalAuth()`   | Session attached when present, not required |
 
 ```ts
 import { AllowAnonymous, OptionalAuth, Session, UserSession } from "@thallesp/nestjs-better-auth";
@@ -84,12 +84,12 @@ getProfile(@Session() session: UserSession) {
 
 Use library decorators for coarse route-level checks. Fine-grained resource checks still belong in action services via CASL. See `authorization.md`.
 
-| Decorator              | Scope          | Use case                          |
-| ---------------------- | -------------- | --------------------------------- |
-| `@Roles(["superadmin"])` | System-level | Better Auth admin plugin          |
-| `@OrgRoles([...])`     | Organization   | Requires `activeOrganizationId`   |
-| `@UserHasPermission()` | System-level   | Admin plugin access control       |
-| `@MemberHasPermission()`| Organization  | Org plugin access control         |
+| Decorator                | Scope        | Use case                        |
+| ------------------------ | ------------ | ------------------------------- |
+| `@Roles(["superadmin"])` | System-level | Better Auth admin plugin        |
+| `@OrgRoles([...])`       | Organization | Requires `activeOrganizationId` |
+| `@UserHasPermission()`   | System-level | Admin plugin access control     |
+| `@MemberHasPermission()` | Organization | Org plugin access control       |
 
 ## Hooks (NestJS DI)
 
@@ -99,14 +99,24 @@ Register auth lifecycle hooks as injectable providers with `@Hook()`, `@BeforeHo
 @Hook()
 @Injectable()
 export class SignUpHook {
-  constructor(private readonly sendWelcomeEmail: SendWelcomeEmailService) {}
+  constructor(private readonly sendWelcomeEmailService: SendWelcomeEmailService) {}
 
-  @BeforeHook("/sign-up/email")
+  @BeforeHook('/sign-up/email')
   async handle(ctx: AuthHookContext) {
-    await this.sendWelcomeEmail.execute(ctx);
+    await this.sendWelcomeEmailService.execute(ctx);
   }
 }
 ```
+
+## Email verification and queued mail
+
+Customer sign-up requires Email verification (`requireEmailVerification: true`). Sign-up creates the User and enqueues a plain-text verification email. It does not issue a Session. The Customer signs in after calling Better Auth’s verify URL. A second sign-up with the same email returns `409 CONFLICT` with `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL` from the origin gate. Better Auth would otherwise return a synthetic 200 to hide whether the email is registered.
+
+Auth owns copy. `createAuth` receives the mail queue and enqueues `{ to, subject, text, html }` from `sendVerificationEmail` (plain text, `html` empty). Better Auth signs a JWT and verifies it — it does not persist a verification row for this flow. BullMQ’s Redis connection lives in `shared/queue/`. Shared mail lives in `shared/mail/`: the mail queue, Resend, and the processor in the same Nest process. Resend failure is retried by the queue, except reserved test recipients (`example.com`) which are skipped and other 4xx responses (except rate limits) which fail without retry.
+
+Wire `createAuth({ prisma, mailQueue })` via Nest `forRootAsync`, injecting `PrismaService` and `getQueueToken(MAIL_QUEUE)`. Forgotten password stays forbidden.
+
+Env: `REDIS_URL`, `RESEND_API_KEY`, `MAIL_FROM`. E2E and `nx serve` require Redis as well as PostgreSQL. Seed stubs `mailQueue.add`. E2E finishes Email verification by reading the queued mail job and calling Better Auth’s verify URL — testers do not parse mailboxes.
 
 ## AuthService
 
@@ -124,4 +134,5 @@ Inject `AuthService<typeof auth>` for programmatic access to better-auth API end
 - **NEVER** expose `BETTER_AUTH_SECRET` or provider client secrets to clients.
 - **NEVER** trust client-sent user IDs — resolve identity from `@Session()` or `req.user`.
 - **NEVER** implement sign-in/sign-up/sign-out in feature controllers — better-auth handles auth routes.
+- **NEVER** send mail inline on the auth request path.
 - Session and user types come from the shared schemas package or better-auth — do not duplicate them.

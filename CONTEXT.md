@@ -28,6 +28,10 @@ _Avoid_: Admin, owner, operator, staff
 Proof that a User is signed in. The API treats a request as that User while the Session is valid.
 _Avoid_: Token, JWT, login
 
+**Email verification**:
+Proof that a User owns the email they signed up with. A Customer does not get a Session until Email verification succeeds. Testers finish verification by reading the queued mail job and calling Better Auth’s verify URL — they do not parse mailboxes.
+_Avoid_: Confirm email, activation, magic link
+
 **Event**:
 A fact that a User did something that matters to the product. The auth Events are user signed up, email verified, user signed in, and user signed out. Sign-up does not include signed in. Failed auth, get-session, and Health are not Events. An Event is not a Log and not a Trace.
 _Avoid_: Trace, span, log, login, capture

@@ -6,7 +6,7 @@
 - Maintain consistent vocabulary: prefer `getUser()` over mixing `getUserInfo()`, `getUserDetails()`, `getUserData()`
 - Avoid mental mapping: explicit names over implicit abbreviations (`user` not `u`)
 - Don't add redundant context: `car.make` not `car.carMake` when the type is already `Car`
-- Use searchable names for magic values: `const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000`
+- Use searchable names for magic values in the area constants file: `{name}.constants.ts` on the server (`auth.constants.ts`, `mail.constants.ts`), `constants.ts` in a frontend feature. `VERIFICATION_EMAIL_SUBJECT`, not `'Verify your email'` inline in a service.
 - Use default parameters instead of short-circuiting: `function loadPages(count = 10)` not `count || 10`
 - Use enums to document intent over string constants
 
@@ -35,7 +35,7 @@
 - Use getters/setters for controlled access and validation
 - Make members private/protected by default
 - Prefer immutability: `readonly` properties, `ReadonlyArray<T>`, `as const` assertions
-- Use `type` for unions/intersections, `interface` for `extends`/`implements`
+- Use `interface` for object shapes (in the module `interfaces/` folder). Use `type` only for unions, intersections, mapped types, function types, and Zod `z.infer`.
 
 ## 4. Classes
 

@@ -3,7 +3,7 @@
 ## General Rules
 
 - Components are **small, focused, and single-responsibility**.
-- Props interface is always explicit and exported if reused.
+- Props interface is always explicit and exported if reused. Feature-level object shapes live in `interfaces/`. Component-local props may stay colocated in the component file as `interface`, never `type`.
 - Default to named exports. Use `export { Component }` pattern.
 
 ## Server & Client Components
