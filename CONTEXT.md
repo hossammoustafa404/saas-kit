@@ -13,16 +13,16 @@ An authenticated person with a name and an email. Every login, Session, and emai
 _Avoid_: Account, client, person
 
 **Role**:
-Whether a User is an Admin or a Customer. Not a permission.
+Whether a User is a Super Admin or a Customer. Not a permission.
 _Avoid_: Permission, type, access level, user
 
 **Customer**:
 A User who uses the web app. A Customer is created by public sign-up. A Customer cannot use the admin app.
 _Avoid_: Client, end user, member, buyer
 
-**Admin**:
-A User who uses the admin app and cannot use the web app. An Admin is never created by public sign-up; the first Admin is seeded, and later Admins are created only by an existing Admin.
-_Avoid_: Owner, operator, superadmin, staff
+**Super Admin**:
+A User who uses the admin app and cannot use the web app. A Super Admin is never created by public sign-up; the first Super Admin is seeded, and later Super Admins are created only by an existing Super Admin. Stored as Role `superadmin`.
+_Avoid_: Admin, owner, operator, staff
 
 **Session**:
 Proof that a User is signed in. The API treats a request as that User while the Session is valid.

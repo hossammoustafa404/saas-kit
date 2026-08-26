@@ -102,16 +102,16 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('should reject an Admin signing in from the web origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'admin' });
+    it('should reject a Super Admin signing in from the web origin as invalid credentials', async () => {
+      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
 
       await expect(
         hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'a@example.com' })),
       ).rejects.toEqual(invalidCredentialsError());
     });
 
-    it('should allow an Admin to sign in from the admin origin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'admin' });
+    it('should allow a Super Admin to sign in from the admin origin', async () => {
+      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
 
       await expect(
         hook.beforeSignIn(
@@ -146,7 +146,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should allow either Role to sign in from tooling', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ role: 'admin' });
+      prisma.user.findUnique.mockResolvedValueOnce({ role: 'superadmin' });
       await expect(
         hook.beforeSignIn(createContext(API_ORIGIN, { email: 'a@example.com' })),
       ).resolves.toBeUndefined();

@@ -86,7 +86,7 @@ Use library decorators for coarse route-level checks. Fine-grained resource chec
 
 | Decorator              | Scope          | Use case                          |
 | ---------------------- | -------------- | --------------------------------- |
-| `@Roles(["admin"])`    | System-level   | Better Auth admin plugin          |
+| `@Roles(["superadmin"])` | System-level | Better Auth admin plugin          |
 | `@OrgRoles([...])`     | Organization   | Requires `activeOrganizationId`   |
 | `@UserHasPermission()` | System-level   | Admin plugin access control       |
 | `@MemberHasPermission()`| Organization  | Org plugin access control         |

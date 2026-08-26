@@ -11,7 +11,7 @@ import type { Env } from '../../../shared/config/env.schema';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 
 type OriginKind = 'web' | 'admin' | 'tooling' | 'untrusted';
-type UserRole = 'admin' | 'customer';
+type UserRole = 'superadmin' | 'customer';
 
 @Hook()
 @Injectable()
@@ -47,7 +47,8 @@ export class OriginGateHook {
       return;
     }
 
-    const role: UserRole = user.role === 'admin' ? 'admin' : 'customer';
+    const role: UserRole =
+      user.role === 'superadmin' ? 'superadmin' : 'customer';
     if (!this.isSignInAllowed(this.classifyOrigin(ctx), role)) {
       this.throwInvalidEmailOrPassword();
     }
@@ -95,7 +96,7 @@ export class OriginGateHook {
     }
 
     if (kind === 'admin') {
-      return role === 'admin';
+      return role === 'superadmin';
     }
 
     return false;
