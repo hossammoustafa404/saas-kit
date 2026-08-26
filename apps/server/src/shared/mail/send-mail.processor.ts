@@ -25,7 +25,7 @@ export class SendMailProcessor extends WorkerHost {
 
   async process(job: Job<MailJob>): Promise<void> {
     const { to, subject, text, html } = job.data;
-    if (this.isBlockedResendRecipient(to)) {
+    if (this.shouldSkipResendRecipient(to)) {
       this.logger.warn('Skipping Resend for a blocked test recipient');
       return;
     }
@@ -44,6 +44,14 @@ export class SendMailProcessor extends WorkerHost {
       }
       throw new Error(error.message);
     }
+  }
+
+  private shouldSkipResendRecipient(email: string): boolean {
+    if (this.config.get('NODE_ENV', { infer: true }) === 'production') {
+      return false;
+    }
+
+    return this.isBlockedResendRecipient(email);
   }
 
   private isBlockedResendRecipient(email: string): boolean {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const EnvSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   PORT: z.coerce.number().int().positive().default(9000),
+  NODE_ENV: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.url(),
   WEB_ORIGIN: z.url(),

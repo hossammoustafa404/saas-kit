@@ -32,7 +32,7 @@ describe('SendMailProcessor', () => {
   beforeEach(() => {
     resend.emails.send.mockReset();
     config.get.mockReset();
-    config.get.mockReturnValue('onboarding@resend.dev');
+    mockConfig();
     resend.emails.send.mockResolvedValue({
       data: { id: 'email_1' },
       error: null,
@@ -40,10 +40,24 @@ describe('SendMailProcessor', () => {
     });
   });
 
-  it('should skip Resend for an example.com recipient', async () => {
+  it('should skip Resend for an example.com recipient outside production', async () => {
     await processor.process(createMailJob('casey@example.com'));
 
     expect(resend.emails.send).not.toHaveBeenCalled();
+  });
+
+  it('should send through Resend for an example.com recipient in production', async () => {
+    mockConfig('production');
+
+    await processor.process(createMailJob('casey@example.com'));
+
+    expect(resend.emails.send).toHaveBeenCalledWith({
+      from: 'onboarding@resend.dev',
+      to: 'casey@example.com',
+      subject: 'Verify your email',
+      text: 'Verify your email by opening this link:\nhttps://kit.test/verify',
+      html: '',
+    });
   });
 
   it('should send through Resend for a normal recipient', async () => {
@@ -89,6 +103,18 @@ describe('SendMailProcessor', () => {
     await expect(pending).rejects.toThrow('Resend is down');
     await expect(pending).rejects.not.toBeInstanceOf(UnrecoverableError);
   });
+
+  function mockConfig(nodeEnv = 'test') {
+    config.get.mockImplementation((key: string) => {
+      if (key === 'MAIL_FROM') {
+        return 'onboarding@resend.dev';
+      }
+      if (key === 'NODE_ENV') {
+        return nodeEnv;
+      }
+      return undefined;
+    });
+  }
 });
 
 function createMailJob(to: string): Job<MailJob> {
