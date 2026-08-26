@@ -1,9 +1,11 @@
-import { Logger } from '@nestjs/common';
+import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module';
+import { AUTH_DOCS_ROUTE } from './modules/auth';
 import type { Env } from './shared/config/env.schema';
+import { BULL_BOARD_ROUTE } from './shared/queue/queue.constants';
 import { setupSwagger } from './shared/swagger/setup-swagger';
 
 async function bootstrap() {
@@ -12,7 +14,9 @@ async function bootstrap() {
   const globalPrefix = 'api';
   const port = config.get('PORT', { infer: true });
 
-  app.setGlobalPrefix(globalPrefix);
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: [{ path: BULL_BOARD_ROUTE.slice(1), method: RequestMethod.ALL }],
+  });
   app.enableCors({
     origin: [
       config.get('WEB_ORIGIN', { infer: true }),
@@ -29,6 +33,8 @@ async function bootstrap() {
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
   );
+  Logger.log(`Better Auth docs: http://localhost:${port}${AUTH_DOCS_ROUTE}`);
+  Logger.log(`Bull Board: http://localhost:${port}${BULL_BOARD_ROUTE}`);
 }
 
 bootstrap();

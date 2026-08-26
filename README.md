@@ -6,6 +6,7 @@
 
 [Learn more about this workspace setup and its capabilities](https://nx.dev/docs/technologies/typescript/introduction?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 🚀 If you haven't connected to Nx Cloud yet, [complete your setup here](https://cloud.nx.app/get-started). Get faster builds with remote caching, distributed task execution, and self-healing CI. [See how your workspace can benefit](#nx-cloud).
+
 ## Generate a library
 
 ```sh
@@ -32,7 +33,7 @@ These targets are either [inferred automatically](https://nx.dev/docs/concepts/i
 
 ## Prisma (`server`)
 
-The API uses Prisma 7 against local PostgreSQL (`localhost:5432`, database `saas_kit`). Copy `apps/server/.env.example` to `apps/server/.env` and set `DATABASE_URL`. Create the database if it does not exist. Do not commit `.env`.
+The API uses Prisma 7 against local PostgreSQL (`localhost:5432`, database `saas_kit`). It also needs Redis (`localhost:6379`) for the mail queue and a Resend API key for outbound mail. Copy `apps/server/.env.example` to `apps/server/.env` and set `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`, and `MAIL_FROM`. Create the database if it does not exist. Do not commit `.env`.
 
 Run Prisma through Nx from the workspace root so `cwd` is `apps/server`:
 
@@ -43,12 +44,12 @@ npx nx run server:prisma-seed
 npx nx run server:prisma-studio
 ```
 
-| Target | What it does |
-| --- | --- |
+| Target            | What it does                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `prisma-generate` | Generates the Prisma Client into `apps/server/src/shared/prisma/generated/` (gitignored). `build` and `test` depend on this target. |
-| `prisma-migrate` | Runs `prisma migrate dev`. Add the first migration when the first model is added — do not commit an empty baseline. |
-| `prisma-seed` | Runs `prisma db seed` (`src/shared/prisma/seed.ts`). Not part of `build`. Prisma 7 does not seed automatically after migrate. |
-| `prisma-studio` | Opens Prisma Studio. |
+| `prisma-migrate`  | Runs `prisma migrate dev`. Add the first migration when the first model is added — do not commit an empty baseline.                 |
+| `prisma-seed`     | Runs `prisma db seed` (`src/shared/prisma/seed.ts`). Not part of `build`. Prisma 7 does not seed automatically after migrate.       |
+| `prisma-studio`   | Opens Prisma Studio.                                                                                                                |
 
 Then serve the API:
 

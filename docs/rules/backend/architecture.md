@@ -25,6 +25,16 @@ src/
 │   │   └── interfaces/                   # NEVER types.ts — one file per interface
 │   │       ├── index.ts
 │   │       └── http-outcome-request.interface.ts
+│   ├── queue/
+│   │   ├── queue.module.ts
+│   │   ├── queue.constants.ts
+│   │   └── bull-board-auth.middleware.ts
+│   ├── mail/
+│   │   ├── mail.module.ts
+│   │   ├── mail.constants.ts
+│   │   ├── send-mail.processor.ts
+│   │   └── interfaces/
+│   │       └── mail-job.interface.ts
 │   ├── swagger/
 │   │   └── setup-swagger.ts      # DocumentBuilder + SwaggerModule.setup
 │   └── pipes/                    # Global pipes with no owning module (if not registered in main.ts)
@@ -44,6 +54,8 @@ src/
         ├── interfaces/           # Internal shapes — not HTTP Zod contracts
         │   ├── index.ts
         │   └── {name}.interface.ts
+        ├── enums/                  # Module-scoped enums — `{name}.enum.ts`
+        │   └── index.ts
         └── services/               # One folder per action
             ├── index.ts            # Barrel — re-exports all action services
             ├── find-one-user/
@@ -56,12 +68,21 @@ src/
 
 ## Enforcement Rules
 
+- **ALWAYS** put module-level object-shape contracts in `modules/{name}/interfaces/{name}.interface.ts` as `interface` (barrel `interfaces/index.ts`). Shared infra object shapes live in `shared/{area}/interfaces/{name}.interface.ts` — import the concrete file, no `shared/` barrels.
+- **ALWAYS** put module-level enums in `modules/{name}/enums/{name}.enum.ts` (barrel `enums/index.ts`). Shared infra enums live in `shared/{area}/enums/{name}.enum.ts` — import the concrete file, no `shared/` barrels.
+- **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
+- **NEVER** declare object-shape `type` aliases or interfaces in services, controllers, hooks, or other implementation files.
+- **NEVER** use `type` for an object shape. `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
+- **NEVER** put HTTP contracts in `interfaces/` — those stay in `@saas-kit/schemas` and module `dto/`. **NEVER** define a parallel interface for a Zod schema.
+- **ALWAYS** put module-level `SCREAMING_SNAKE_CASE` constants in `modules/{name}/{name}.constants.ts`. Shared infra constants live in `shared/{area}/{area}.constants.ts`. **NEVER** a bare `constants.ts` on the server.
+- **NEVER** declare `SCREAMING_SNAKE_CASE` constants in services, controllers, hooks, or other implementation files.
+- **NEVER** create a `constants/` folder. **NEVER** put domain constants in `shared/`.
 - **NEVER** put business logic in `main.ts` or `app.module.ts` beyond wiring.
 - **NEVER** access Prisma directly from controllers. Controllers delegate to action services.
 - **NEVER** create an `entities/` folder — use Prisma types and shared Zod schemas.
 - Each feature is a self-contained NestJS module with controller, action services, DTOs, and scoped guards/decorators.
 - Register feature modules in `app.module.ts` — do not nest feature modules inside each other unless there is a genuine parent/child domain relationship.
-- Infrastructure used by multiple modules (`prisma`, `config`, `observability`) lives in `shared/` — not inside feature modules.
+- Infrastructure used by multiple modules (`prisma`, `config`, `observability`, `queue`, `mail`) lives in `shared/` — not inside feature modules.
 - Shared infra is named after the folder: `ObservabilityModule` + `ObservabilityService` + `observability.constants.ts`. Do not invent a verb-resource service (`LogHttpOutcomeService`) for shared infra.
 - Filters and interceptors live **inside the module that owns the concern** (`shared/observability/filters/`, or `modules/{name}/filters/` when the concern is a feature). Register globals with `APP_FILTER` / `APP_INTERCEPTOR` in that module's `providers`.
 - HTTP 4xx/5xx from Nest **throw**. The observability **filter** logs them. better-auth (no Nest throw) is logged on Express `finish`. **NEVER** a global interceptor that treats a Nest handler return as 4xx/5xx — that return must not happen. See `controllers.md`.
@@ -69,7 +90,7 @@ src/
 - Constants: `{module}.constants.ts` at the module root. **NEVER** `constants.ts`.
 - Internal interfaces: `interfaces/{name}.interface.ts` — **one exported interface per file**. Re-export from `interfaces/index.ts`. **NEVER** `types.ts`. **NEVER** put several interfaces in one file. HTTP contracts stay in `@saas-kit/schemas`, not here.
 - **NEVER** apply frontend feature root files (`constants.ts`, `types.ts`) to `apps/server`.
-- **NEVER** create `shared/index.ts` or `shared/swagger/index.ts`. Import from the concrete file (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/observability/observability.module`, `shared/swagger/setup-swagger`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) and folder barrels (`interfaces/index.ts`) stay required.
+- **NEVER** create `shared/index.ts` or `shared/swagger/index.ts`. Import from the concrete file (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/observability/observability.module`, `shared/queue/queue.module`, `shared/mail/mail.module`, `shared/swagger/setup-swagger`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) and folder barrels (`interfaces/index.ts`) stay required.
 - **NEVER** create `shared/docs/`. Swagger lives in `shared/swagger/setup-swagger.ts` only — DocumentBuilder metadata stays in that file. **NEVER** split a `swagger.config.ts`. **NEVER** put error envelopes, Scalar, or other docs products in `shared/swagger/`.
 - **NEVER** export env schemas from `@saas-kit/schemas`. Server process config stays in `shared/config/`. HTTP contracts stay in `@saas-kit/schemas`.
 
@@ -122,6 +143,21 @@ export class UserController {
 - Auth guards and session decorators come from `@thallesp/nestjs-better-auth` — do not reimplement. See `authentication.md`.
 - Register module-scoped guards in the module's `providers` and apply via `@UseGuards()` or module-level setup.
 
+## Module-Scoped Interfaces
+
+- Object-shape contracts used **only within a module** live in `interfaces/` — `{name}.interface.ts`, re-exported from `interfaces/index.ts`.
+- **ALWAYS** use `interface`, never `type Foo = { ... }`.
+- Import from the folder barrel within the module: `from "../../interfaces"`, not `from "../../interfaces/create-auth-options.interface"`.
+- HTTP request/response shapes stay in `@saas-kit/schemas` and `dto/`. Do not duplicate them as interfaces.
+
+## Module-Scoped Enums
+
+- Enums used **only within a module** live in `enums/` — `{name}.enum.ts`, re-exported from `enums/index.ts`.
+- **ALWAYS** use `enum`, never a string-union `type` for a closed set of named values (`UserRole`, not `type UserRole = 'superadmin' | 'customer'`).
+- Import from the folder barrel within the module: `from "../../enums"`, not `from "../../enums/user-role.enum"`.
+- **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
+- Cross-module consumers import public enums from `modules/{name}` or that module's `enums` barrel — **NEVER** a single `{name}.enum.ts` file across boundaries.
+
 ## Public API (Strict)
 
 Every feature exposes a controlled surface through `modules/{name}/index.ts`. Everything else is internal.
@@ -139,6 +175,8 @@ Every feature exposes a controlled surface through `modules/{name}/index.ts`. Ev
 | Action service  | Single use case — business logic, CASL, Prisma      |
 | Prisma          | Data access only — no business rules in queries      |
 | DTO / Schema    | Input validation and output serialization           |
+| Interface       | Internal object-shape contracts — not HTTP          |
+| Enum            | Closed named value sets (`UserRole`, `OriginKind`)  |
 | Guard/Decorator | Module-scoped or library-provided access control    |
 
 ```ts

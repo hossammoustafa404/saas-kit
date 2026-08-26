@@ -1,5 +1,6 @@
 import { APIError } from 'better-auth/api';
 import type { AuthHookContext } from '@thallesp/nestjs-better-auth';
+import { UserRole } from '../enums';
 import { OriginGateHook } from './origin-gate.hook';
 
 jest.mock('@thallesp/nestjs-better-auth', () => ({
@@ -12,6 +13,10 @@ jest.mock('better-auth', () => ({
     INVALID_EMAIL_OR_PASSWORD: {
       code: 'INVALID_EMAIL_OR_PASSWORD',
       message: 'Invalid email or password',
+    },
+    USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: {
+      code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+      message: 'User already exists. Use another email.',
     },
   },
 }));
@@ -52,10 +57,7 @@ describe('OriginGateHook', () => {
         BETTER_AUTH_URL: API_ORIGIN,
       })[key],
   };
-  const hook = new OriginGateHook(
-    prisma as never,
-    config as never,
-  );
+  const hook = new OriginGateHook(prisma as never, config as never);
 
   beforeEach(() => {
     prisma.user.findUnique.mockReset();
@@ -81,9 +83,9 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject sign-up from the admin origin', async () => {
-      await expect(hook.beforeSignUp(createContext(ADMIN_ORIGIN))).rejects.toThrow(
-        APIError,
-      );
+      await expect(
+        hook.beforeSignUp(createContext(ADMIN_ORIGIN)),
+      ).rejects.toThrow(APIError);
     });
 
     it('should reject sign-up from an untrusted origin', async () => {
@@ -91,27 +93,66 @@ describe('OriginGateHook', () => {
         hook.beforeSignUp(createContext('https://evil.example')),
       ).rejects.toThrow(APIError);
     });
+
+    it('should reject sign-up when the email is already registered', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 1n });
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: 'casey@example.com' }),
+        ),
+      ).rejects.toEqual(userAlreadyExistsError());
+    });
+
+    it('should reject sign-up when the existing email casing differs', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 1n });
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: '  Casey@Example.COM  ' }),
+        ),
+      ).rejects.toEqual(userAlreadyExistsError());
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'casey@example.com' },
+        select: { id: true },
+      });
+    });
+
+    it('should allow sign-up when the email is unknown', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        hook.beforeSignUp(
+          createContext(WEB_ORIGIN, { email: 'casey@example.com' }),
+        ),
+      ).resolves.toBeUndefined();
+    });
   });
 
   describe('beforeSignIn', () => {
     it('should allow a Customer to sign in from the web origin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
-        hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'c@example.com' })),
+        hook.beforeSignIn(
+          createContext(WEB_ORIGIN, { email: 'c@example.com' }),
+        ),
       ).resolves.toBeUndefined();
     });
 
     it('should reject a Super Admin signing in from the web origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.SuperAdmin });
 
       await expect(
-        hook.beforeSignIn(createContext(WEB_ORIGIN, { email: 'a@example.com' })),
+        hook.beforeSignIn(
+          createContext(WEB_ORIGIN, { email: 'a@example.com' }),
+        ),
       ).rejects.toEqual(invalidCredentialsError());
     });
 
     it('should allow a Super Admin to sign in from the admin origin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.SuperAdmin });
 
       await expect(
         hook.beforeSignIn(
@@ -121,7 +162,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject a Customer signing in from the admin origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -131,7 +172,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject a Customer signing in from the admin origin when email casing differs', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -146,19 +187,23 @@ describe('OriginGateHook', () => {
     });
 
     it('should allow either Role to sign in from tooling', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValueOnce({
+        role: UserRole.SuperAdmin,
+      });
       await expect(
-        hook.beforeSignIn(createContext(API_ORIGIN, { email: 'a@example.com' })),
+        hook.beforeSignIn(
+          createContext(API_ORIGIN, { email: 'a@example.com' }),
+        ),
       ).resolves.toBeUndefined();
 
-      prisma.user.findUnique.mockResolvedValueOnce({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValueOnce({ role: UserRole.Customer });
       await expect(
         hook.beforeSignIn(createContext(undefined, { email: 'c@example.com' })),
       ).resolves.toBeUndefined();
     });
 
     it('should reject sign-in from an untrusted origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -177,7 +222,20 @@ describe('OriginGateHook', () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe('beforePasswordReset', () => {
+    it('should reject forgotten password', async () => {
+      await expect(hook.beforePasswordReset()).rejects.toThrow(APIError);
+    });
+  });
 });
+
+function userAlreadyExistsError(): APIError {
+  return APIError.from('CONFLICT', {
+    code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+    message: 'User already exists. Use another email.',
+  });
+}
 
 function invalidCredentialsError(): APIError {
   return APIError.from('UNAUTHORIZED', {

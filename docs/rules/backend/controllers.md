@@ -38,8 +38,8 @@ import { FindOneUserService, CreateUserService } from "./services";
 @Controller("users")
 export class UserController {
   constructor(
-    private readonly findOneUser: FindOneUserService,
-    private readonly createUser: CreateUserService,
+    private readonly findOneUserService: FindOneUserService,
+    private readonly createUserService: CreateUserService,
   ) {}
 
   @Get("me")
@@ -49,12 +49,12 @@ export class UserController {
 
   @Get(":id")
   findOne(@Param("id") id: string) {
-    return this.findOneUser.execute(id);
+    return this.findOneUserService.execute(id);
   }
 
   @Post()
   create(@Body(new ZodValidationPipe(CreateUserSchema)) body: CreateUserInput) {
-    return this.createUser.execute(body);
+    return this.createUserService.execute(body);
   }
 }
 ```

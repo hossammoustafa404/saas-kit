@@ -1,11 +1,17 @@
+import { Logger } from '@nestjs/common';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { betterAuth } from 'better-auth';
 import { admin, openAPI } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
 import { EnvSchema } from '../../../shared/config/env.schema';
-import type { PrismaClient } from '../../../shared/prisma/generated/client';
+import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
+import { VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
+import { UserRole } from '../enums';
+import type { CreateAuthOptions } from '../interfaces';
 
-export function createAuth(prisma: PrismaClient) {
+const logger = new Logger('createAuth');
+
+export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
   const env = EnvSchema.parse(process.env);
 
   return betterAuth({
@@ -16,8 +22,27 @@ export function createAuth(prisma: PrismaClient) {
     trustedOrigins: [env.WEB_ORIGIN, env.ADMIN_ORIGIN, env.BETTER_AUTH_URL],
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
-      autoSignIn: true,
+      requireEmailVerification: true,
+      autoSignIn: false,
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: false,
+      sendVerificationEmail: async (data) => {
+        try {
+          await mailQueue.add(MAIL_SEND_JOB, {
+            to: data.user.email,
+            subject: VERIFICATION_EMAIL_SUBJECT,
+            text: `Verify your email by opening this link:\n${data.url}`,
+            html: '',
+          });
+        } catch (error) {
+          logger.error(
+            'Failed to enqueue verification email',
+            error instanceof Error ? error.stack : undefined,
+          );
+        }
+      },
     },
     advanced: {
       database: {
@@ -26,11 +51,11 @@ export function createAuth(prisma: PrismaClient) {
     },
     plugins: [
       admin({
-        defaultRole: 'customer',
-        adminRoles: ['superadmin'],
+        defaultRole: UserRole.Customer,
+        adminRoles: [UserRole.SuperAdmin],
         roles: {
-          superadmin: adminAc,
-          customer: userAc,
+          [UserRole.SuperAdmin]: adminAc,
+          [UserRole.Customer]: userAc,
         },
       }),
       openAPI(),
@@ -41,3 +66,5 @@ export function createAuth(prisma: PrismaClient) {
     },
   });
 }
+
+export type Auth = ReturnType<typeof createAuth>;

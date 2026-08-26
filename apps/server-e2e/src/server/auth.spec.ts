@@ -10,15 +10,16 @@ import {
   signIn,
   signUpCustomer,
   uniqueCustomerEmail,
+  verifyCustomerEmail,
 } from '../support/auth-client';
 
 describe('POST /api/auth/sign-up/email', () => {
-  it('should create a Customer and a Session when Origin is not the admin app', async () => {
+  it('should create a Customer and not issue a Session when Origin is the web app', async () => {
     const res = await signUpCustomer({ origin: WEB_ORIGIN });
 
     expect(res.status).toBe(200);
     expect(res.data.user.role).toBe('customer');
-    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
   });
 
   it('should create a Customer when Origin is the API', async () => {
@@ -26,7 +27,7 @@ describe('POST /api/auth/sign-up/email', () => {
 
     expect(res.status).toBe(200);
     expect(res.data.user.role).toBe('customer');
-    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
   });
 
   it('should create a Customer when Origin is missing', async () => {
@@ -34,7 +35,7 @@ describe('POST /api/auth/sign-up/email', () => {
 
     expect(res.status).toBe(200);
     expect(res.data.user.role).toBe('customer');
-    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
   });
 
   it('should reject sign-up from the admin origin', async () => {
@@ -52,6 +53,61 @@ describe('POST /api/auth/sign-up/email', () => {
 
     expect(res.status).toBe(200);
     expect(res.data.user.role).toBe('customer');
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+  });
+
+  it('should reject sign-up when the email is already registered', async () => {
+    const email = uniqueCustomerEmail();
+    await signUpCustomer({ origin: WEB_ORIGIN, email });
+
+    const res = await signUpCustomer({ origin: WEB_ORIGIN, email });
+
+    expect(res.status).toBe(409);
+    expect(res.data.code).toBe('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL');
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+  });
+});
+
+describe('Email verification', () => {
+  it('should reject sign-in until Email verification succeeds', async () => {
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+
+    const beforeVerify = await signIn({
+      email,
+      password,
+      origin: WEB_ORIGIN,
+    });
+
+    expect(beforeVerify.status).toBeGreaterThanOrEqual(400);
+    expect(hasSessionCookie(beforeVerify.headers['set-cookie'])).toBe(false);
+  });
+
+  it('should let a Customer sign in from the web origin after verifying via the database token', async () => {
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+
+    const verify = await verifyCustomerEmail(email);
+    expect(verify.status).toBe(200);
+    expect(hasSessionCookie(verify.headers['set-cookie'])).toBe(false);
+
+    const res = await signIn({ email, password, origin: WEB_ORIGIN });
+
+    expect(res.status).toBe(200);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
+  });
+
+  it('should let a Customer sign in from tooling after Email verification', async () => {
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: API_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
+
+    const fromApi = await signIn({ email, password, origin: API_ORIGIN });
+    expect(fromApi.status).toBe(200);
+    expect(hasSessionCookie(fromApi.headers['set-cookie'])).toBe(true);
   });
 });
 
@@ -60,6 +116,7 @@ describe('POST /api/auth/sign-in/email', () => {
     const email = uniqueCustomerEmail();
     const password = 'customer-password-1';
     await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
 
     const res = await signIn({ email, password, origin: WEB_ORIGIN });
 
@@ -67,40 +124,42 @@ describe('POST /api/auth/sign-in/email', () => {
     expect(hasSessionCookie(res.headers['set-cookie'])).toBe(true);
   });
 
-    it('should reject a Customer signing in from the admin origin', async () => {
-      const email = uniqueCustomerEmail();
-      const password = 'customer-password-1';
-      await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+  it('should reject a Customer signing in from the admin origin', async () => {
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
 
-      const [wrongOrigin, unknownEmail] = await Promise.all([
-        signIn({ email, password, origin: ADMIN_ORIGIN }),
-        signIn({
-          email: uniqueCustomerEmail(),
-          password,
-          origin: ADMIN_ORIGIN,
-        }),
-      ]);
-
-      expect(wrongOrigin.status).toBe(401);
-      expect(unknownEmail.status).toBe(401);
-      expect(wrongOrigin.data).toEqual(unknownEmail.data);
-      expect(hasSessionCookie(wrongOrigin.headers['set-cookie'])).toBe(false);
-    });
-
-    it('should reject a Customer signing in from the admin origin even when email casing differs', async () => {
-      const email = uniqueCustomerEmail();
-      const password = 'customer-password-1';
-      await signUpCustomer({ origin: WEB_ORIGIN, email, password });
-
-      const res = await signIn({
-        email: email.toUpperCase(),
+    const [wrongOrigin, unknownEmail] = await Promise.all([
+      signIn({ email, password, origin: ADMIN_ORIGIN }),
+      signIn({
+        email: uniqueCustomerEmail(),
         password,
         origin: ADMIN_ORIGIN,
-      });
+      }),
+    ]);
 
-      expect(res.status).toBe(401);
-      expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+    expect(wrongOrigin.status).toBe(401);
+    expect(unknownEmail.status).toBe(401);
+    expect(wrongOrigin.data).toEqual(unknownEmail.data);
+    expect(hasSessionCookie(wrongOrigin.headers['set-cookie'])).toBe(false);
+  });
+
+  it('should reject a Customer signing in from the admin origin even when email casing differs', async () => {
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
+
+    const res = await signIn({
+      email: email.toUpperCase(),
+      password,
+      origin: ADMIN_ORIGIN,
     });
+
+    expect(res.status).toBe(401);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
+  });
 
   it('should sign in a Super Admin from the admin origin', async () => {
     const res = await signIn({
@@ -161,6 +220,7 @@ describe('POST /api/auth/sign-in/email', () => {
     const email = uniqueCustomerEmail();
     const password = 'customer-password-1';
     await signUpCustomer({ email, password });
+    await verifyCustomerEmail(email);
 
     const res = await signIn({ email, password });
 
@@ -181,8 +241,11 @@ describe('GET /api/auth/get-session', () => {
 
   it('should identify the signed-in User from the Session cookie', async () => {
     const email = uniqueCustomerEmail();
-    const signUp = await signUpCustomer({ origin: WEB_ORIGIN, email });
-    const cookie = cookieHeader(signUp.headers['set-cookie']);
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
+    const signInRes = await signIn({ email, password, origin: WEB_ORIGIN });
+    const cookie = cookieHeader(signInRes.headers['set-cookie']);
 
     const res = await axios.get('/api/auth/get-session', {
       headers: { Cookie: cookie },
@@ -197,8 +260,12 @@ describe('GET /api/auth/get-session', () => {
 
 describe('POST /api/auth/sign-out', () => {
   it('should end the Session', async () => {
-    const signUp = await signUpCustomer({ origin: WEB_ORIGIN });
-    const cookie = cookieHeader(signUp.headers['set-cookie']);
+    const email = uniqueCustomerEmail();
+    const password = 'customer-password-1';
+    await signUpCustomer({ origin: WEB_ORIGIN, email, password });
+    await verifyCustomerEmail(email);
+    const signInRes = await signIn({ email, password, origin: WEB_ORIGIN });
+    const cookie = cookieHeader(signInRes.headers['set-cookie']);
 
     const signOut = await axios.post(
       '/api/auth/sign-out',
@@ -217,6 +284,19 @@ describe('POST /api/auth/sign-out', () => {
     });
 
     expect(session.data?.user ?? session.data?.session ?? null).toBeNull();
+  });
+});
+
+describe('POST /api/auth/request-password-reset', () => {
+  it('should reject forgotten password', async () => {
+    const res = await axios.post(
+      '/api/auth/request-password-reset',
+      { email: uniqueCustomerEmail() },
+      { validateStatus: () => true },
+    );
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(hasSessionCookie(res.headers['set-cookie'])).toBe(false);
   });
 });
 

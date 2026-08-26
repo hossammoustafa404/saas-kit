@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { config as loadEnv } from 'dotenv';
 import { EnvSchema } from '../config/env.schema';
-import { createAuth } from '../../modules/auth';
+import { createAuth, UserRole } from '../../modules/auth';
 import { PrismaClient } from './generated/client';
 import { SeedAdminEnvSchema } from './seed-admin-env.schema';
 
@@ -21,11 +21,14 @@ async function seed(): Promise<void> {
       select: { id: true, role: true, emailVerified: true },
     });
     if (existing) {
-      if (existing.role !== 'superadmin' || existing.emailVerified !== true) {
+      if (
+        existing.role !== UserRole.SuperAdmin ||
+        existing.emailVerified !== true
+      ) {
         await prisma.user.update({
           where: { id: existing.id },
           data: {
-            role: 'superadmin',
+            role: UserRole.SuperAdmin,
             emailVerified: true,
           },
         });
@@ -33,14 +36,17 @@ async function seed(): Promise<void> {
       return;
     }
 
-    const auth = createAuth(prisma);
+    const auth = createAuth({
+      prisma,
+      mailQueue: { add: async () => undefined },
+    });
 
     await auth.api.createUser({
       body: {
         email: seedAdmin.SEED_ADMIN_EMAIL,
         password: seedAdmin.SEED_ADMIN_PASSWORD,
         name: seedAdmin.SEED_ADMIN_NAME,
-        role: 'superadmin',
+        role: UserRole.SuperAdmin,
         data: { emailVerified: true },
       },
     });

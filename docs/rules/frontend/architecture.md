@@ -30,8 +30,12 @@ features/
 │   │   └── use-feature-store.ts
 │   ├── views/
 │   │   └── users-view.tsx
+│   ├── interfaces/
+│   │   └── index.ts          # Object-shape interfaces — `{name}.interface.ts`
+│   ├── enums/
+│   │   └── index.ts          # Enums — `{name}.enum.ts`
 │   ├── constants.ts
-│   ├── types.ts          # Frontend-only types
+│   ├── types.ts          # Unions, aliases, schema re-exports — not object shapes
 │   └── utils.ts
 components/ui/        # shadcn/ui components (auto-generated)
 lib/
@@ -42,6 +46,14 @@ lib/
 
 ## Enforcement Rules
 
+- **ALWAYS** put feature-level object-shape contracts in `features/{name}/interfaces/{name}.interface.ts` as `interface`. Import from `../interfaces`.
+- **ALWAYS** put feature-level enums in `features/{name}/enums/{name}.enum.ts`. Import from `../enums`.
+- **NEVER** declare an `enum` in a component, hook, view, or service.
+- **NEVER** use `type` for an object shape. `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
+- **NEVER** declare feature-level object-shape interfaces in services, hooks, or views. Component-local props interfaces may stay colocated in the component file.
+- **ALWAYS** put feature-level `SCREAMING_SNAKE_CASE` constants in `features/{name}/constants.ts`.
+- **NEVER** declare `SCREAMING_SNAKE_CASE` constants in components, hooks, views, or services.
+- **NEVER** create a `constants/` folder.
 - **NEVER** write business logic, data fetching, or state management directly in `app/`.
 - **NEVER** create a component in `app/` that could live in `features/`.
 - `app/page.tsx` and `app/**/page.tsx` must be thin shells: compose and render views from `features/{name}` only.
@@ -55,7 +67,7 @@ Every feature exposes a controlled surface through `features/{name}/index.ts`. E
 - **NEVER** deep-import across feature boundaries. No `@/features/{other}/components/...`, `@/features/{other}/services/...`, etc.
 - **ONLY** import from `features/{name}` (or its path alias) in `app/` and in other features.
 - **ONLY** re-export symbols that are intentionally public in `index.ts`. Do not export internal helpers by default.
-- Keep private by default: internal components, `api.ts`, `keys.ts`, `utils.ts`, and store internals stay unexported unless another feature or `app/` genuinely needs them.
+- Keep private by default: internal components, `api.ts`, `keys.ts`, `utils.ts`, `constants.ts`, `interfaces/`, `enums/`, and store internals stay unexported unless another feature or `app/` genuinely needs them.
 - Typical public exports: views and query/mutation hooks needed by `app/` or sibling features.
 - Cross-feature communication goes through the other feature's `index.ts`, never its internal files.
 - If something is imported from outside the feature, it **must** be added to `index.ts` first — no exceptions.
@@ -64,10 +76,11 @@ Every feature exposes a controlled surface through `features/{name}/index.ts`. E
 
 Each subfolder has an `index.ts` that re-exports its contents. Use these barrels for imports **within** the feature.
 
-- **ALWAYS** import from folder barrels: `@/features/{name}/components`, `@/features/{name}/services`, `@/features/{name}/hooks`, etc.
+- **ALWAYS** import from folder barrels: `@/features/{name}/components`, `@/features/{name}/services`, `@/features/{name}/hooks`, `@/features/{name}/interfaces`, `@/features/{name}/enums`, etc.
+- Import root files directly: `from "../constants"`, `from "../types"`. Do not duplicate those values in other files.
 - **NEVER** import individual files from sibling folders when a barrel exists. Use `from "../components"`, not `from "../components/user-card"`.
 - Each folder's `index.ts` re-exports everything that folder shares with the rest of the feature.
-- Root `index.ts` composes from folder barrels and root files (`types.ts`, etc.) for the public API only.
+- Root `index.ts` composes from folder barrels and root files (`constants.ts`, `types.ts`, etc.) for the public API only.
 - **NEVER** import another feature's folder barrels directly. Cross-feature imports go through `features/{other}/index.ts` only.
 
 ```ts
