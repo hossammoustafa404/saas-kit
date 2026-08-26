@@ -27,3 +27,19 @@ _Avoid_: Admin, owner, operator, staff
 **Session**:
 Proof that a User is signed in. The API treats a request as that User while the Session is valid.
 _Avoid_: Token, JWT, login
+
+**Event**:
+A fact that a User did something that matters to the product. The auth Events are user signed up, email verified, user signed in, and user signed out. Sign-up does not include signed in. Failed auth, get-session, and Health are not Events. An Event is not a Log and not a Trace.
+_Avoid_: Trace, span, log, login, capture
+
+**Trace**:
+The path of one HTTP request through the API, including database work. A Trace can exist with no User (for example a failed sign-in). Health is not traced. A Trace is not a product fact.
+_Avoid_: Event, span, request log, log
+
+**Metric**:
+A number over time (count or latency), not a product fact. Auth has no custom Metrics. A later feature may add one. User id, email, and Session id are never Metric attributes.
+_Avoid_: Event, Trace, counter, dashboard
+
+**Log**:
+A line written by the process logger (info, warn, or error). When tracing is on, a Log carries trace_id so it can join a Trace. HTTP 4xx adds a warn Log; HTTP 5xx adds an error Log. Info Logs still exist (boot, Prisma connected, and so on). A Log never includes email, password, or the request body. A Log is not an Event.
+_Avoid_: Event, Trace, capture
