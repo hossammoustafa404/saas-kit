@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { betterAuth } from 'better-auth';
 import { admin, openAPI } from 'better-auth/plugins';
@@ -7,6 +8,8 @@ import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
 import { VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
 import { UserRole } from '../enums';
 import type { CreateAuthOptions } from '../interfaces';
+
+const logger = new Logger('createAuth');
 
 export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
   const env = EnvSchema.parse(process.env);
@@ -26,12 +29,19 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
       sendOnSignUp: true,
       autoSignInAfterVerification: false,
       sendVerificationEmail: async (data) => {
-        await mailQueue.add(MAIL_SEND_JOB, {
-          to: data.user.email,
-          subject: VERIFICATION_EMAIL_SUBJECT,
-          text: `Verify your email by opening this link:\n${data.url}`,
-          html: '',
-        });
+        try {
+          await mailQueue.add(MAIL_SEND_JOB, {
+            to: data.user.email,
+            subject: VERIFICATION_EMAIL_SUBJECT,
+            text: `Verify your email by opening this link:\n${data.url}`,
+            html: '',
+          });
+        } catch (error) {
+          logger.error(
+            'Failed to enqueue verification email',
+            error instanceof Error ? error.stack : undefined,
+          );
+        }
       },
     },
     advanced: {
@@ -58,4 +68,3 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
 }
 
 export type Auth = ReturnType<typeof createAuth>;
-

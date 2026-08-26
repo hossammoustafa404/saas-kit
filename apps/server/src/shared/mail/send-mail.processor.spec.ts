@@ -88,19 +88,43 @@ describe('SendMailProcessor', () => {
     ).rejects.toBeInstanceOf(UnrecoverableError);
   });
 
-  it('should retry when Resend returns a server error', async () => {
-    resend.emails.send.mockResolvedValue({
-      data: null,
-      error: {
-        name: 'internal_server_error',
-        message: 'Resend is down',
-        statusCode: 500,
-      },
-      headers: null,
-    });
+  it.each([
+    { statusCode: 408, name: 'application_error', message: 'Request timeout' },
+    { statusCode: 425, name: 'application_error', message: 'Too early' },
+    { statusCode: 429, name: 'rate_limit_exceeded', message: 'Rate limited' },
+    {
+      statusCode: 500,
+      name: 'internal_server_error',
+      message: 'Resend is down',
+    },
+  ])(
+    'should retry when Resend returns HTTP $statusCode',
+    async ({ statusCode, name, message }) => {
+      resend.emails.send.mockResolvedValue({
+        data: null,
+        error: {
+          name,
+          message,
+          statusCode,
+        },
+        headers: null,
+      });
+
+      const pending = processor.process(createMailJob('casey@customer.test.io'));
+      await expect(pending).rejects.toThrow(message);
+      await expect(pending).rejects.not.toBeInstanceOf(UnrecoverableError);
+    },
+  );
+
+  it('should retry when Resend throws a network error', async () => {
+    resend.emails.send.mockRejectedValue(
+      Object.assign(new Error('connect ECONNREFUSED'), {
+        code: 'ECONNREFUSED',
+      }),
+    );
 
     const pending = processor.process(createMailJob('casey@customer.test.io'));
-    await expect(pending).rejects.toThrow('Resend is down');
+    await expect(pending).rejects.toThrow('connect ECONNREFUSED');
     await expect(pending).rejects.not.toBeInstanceOf(UnrecoverableError);
   });
 

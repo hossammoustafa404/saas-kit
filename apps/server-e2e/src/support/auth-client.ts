@@ -59,6 +59,34 @@ export async function signUpCustomer(
 }
 
 export async function readVerificationToken(email: string): Promise<string> {
+  const queue = getMailQueue();
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const token = tokenFromQueuedMail(
+      email,
+      await queue.getJobs([
+        'waiting',
+        'active',
+        'delayed',
+        'completed',
+        'failed',
+      ]),
+    );
+    if (token !== undefined) {
+      return token;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`No verification mail job for ${email}`);
+}
+
+let mailQueue: Queue | undefined;
+
+function getMailQueue(): Queue {
+  if (mailQueue !== undefined) {
+    return mailQueue;
+  }
+
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl === undefined) {
     throw new Error(
@@ -66,29 +94,18 @@ export async function readVerificationToken(email: string): Promise<string> {
     );
   }
 
-  const queue = new Queue('mail', { connection: { url: redisUrl } });
-  const deadline = Date.now() + 5000;
-  try {
-    while (Date.now() < deadline) {
-      const token = tokenFromQueuedMail(
-        email,
-        await queue.getJobs([
-          'waiting',
-          'active',
-          'delayed',
-          'completed',
-          'failed',
-        ]),
-      );
-      if (token !== undefined) {
-        return token;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    throw new Error(`No verification mail job for ${email}`);
-  } finally {
-    await queue.close();
+  mailQueue = new Queue('mail', { connection: { url: redisUrl } });
+  return mailQueue;
+}
+
+export async function closeMailQueue(): Promise<void> {
+  if (mailQueue === undefined) {
+    return;
   }
+
+  const queue = mailQueue;
+  mailQueue = undefined;
+  await queue.close();
 }
 
 function tokenFromQueuedMail(email: string, jobs: Job[]): string | undefined {

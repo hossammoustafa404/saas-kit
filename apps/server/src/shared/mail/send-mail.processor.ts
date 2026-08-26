@@ -9,6 +9,7 @@ import {
   MAIL_QUEUE,
   RESEND,
   RESEND_BLOCKED_MAIL_DOMAINS,
+  RESEND_RETRYABLE_CLIENT_STATUS_CODES,
 } from './mail.constants';
 
 @Injectable()
@@ -67,7 +68,11 @@ export class SendMailProcessor extends WorkerHost {
   }
 
   private isPermanentResendError(error: ErrorResponse): boolean {
-    if (error.statusCode === null || error.statusCode === 429) {
+    if (error.statusCode === null) {
+      return false;
+    }
+
+    if (RESEND_RETRYABLE_CLIENT_STATUS_CODES.has(error.statusCode)) {
       return false;
     }
 
