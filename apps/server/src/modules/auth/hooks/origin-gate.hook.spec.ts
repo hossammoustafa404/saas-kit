@@ -1,5 +1,6 @@
 import { APIError } from 'better-auth/api';
 import type { AuthHookContext } from '@thallesp/nestjs-better-auth';
+import { UserRole } from '../enums';
 import { OriginGateHook } from './origin-gate.hook';
 
 jest.mock('@thallesp/nestjs-better-auth', () => ({
@@ -131,7 +132,7 @@ describe('OriginGateHook', () => {
 
   describe('beforeSignIn', () => {
     it('should allow a Customer to sign in from the web origin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -141,7 +142,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject a Super Admin signing in from the web origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.SuperAdmin });
 
       await expect(
         hook.beforeSignIn(
@@ -151,7 +152,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should allow a Super Admin to sign in from the admin origin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.SuperAdmin });
 
       await expect(
         hook.beforeSignIn(
@@ -161,7 +162,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject a Customer signing in from the admin origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -171,7 +172,7 @@ describe('OriginGateHook', () => {
     });
 
     it('should reject a Customer signing in from the admin origin when email casing differs', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(
@@ -186,21 +187,23 @@ describe('OriginGateHook', () => {
     });
 
     it('should allow either Role to sign in from tooling', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ role: 'superadmin' });
+      prisma.user.findUnique.mockResolvedValueOnce({
+        role: UserRole.SuperAdmin,
+      });
       await expect(
         hook.beforeSignIn(
           createContext(API_ORIGIN, { email: 'a@example.com' }),
         ),
       ).resolves.toBeUndefined();
 
-      prisma.user.findUnique.mockResolvedValueOnce({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValueOnce({ role: UserRole.Customer });
       await expect(
         hook.beforeSignIn(createContext(undefined, { email: 'c@example.com' })),
       ).resolves.toBeUndefined();
     });
 
     it('should reject sign-in from an untrusted origin as invalid credentials', async () => {
-      prisma.user.findUnique.mockResolvedValue({ role: 'customer' });
+      prisma.user.findUnique.mockResolvedValue({ role: UserRole.Customer });
 
       await expect(
         hook.beforeSignIn(

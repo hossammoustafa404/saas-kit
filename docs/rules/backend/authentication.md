@@ -9,6 +9,10 @@ src/
 └── modules/
     └── auth/
         ├── auth.constants.ts
+        ├── enums/
+        │   ├── index.ts
+        │   ├── origin-kind.enum.ts
+        │   └── user-role.enum.ts
         ├── interfaces/
         │   └── create-auth-options.interface.ts
         ├── lib/
@@ -118,9 +122,11 @@ Wire `createAuth({ prisma, mailQueue })` via Nest `forRootAsync`, injecting `Pri
 
 Env: `REDIS_URL`, `RESEND_API_KEY`, `MAIL_FROM`. E2E and `nx serve` require Redis as well as PostgreSQL. Seed stubs `mailQueue.add`. E2E finishes Email verification by reading the queued mail job and calling Better Auth’s verify URL — testers do not parse mailboxes.
 
+Bull Board is at `/api/queues`. It is Express middleware, so the global `AuthGuard` does not apply. `BullBoardAuthMiddleware` in `shared/queue/` requires a Super Admin Session. Job payloads (including mail) are visible to Super Admins only. **NEVER** leave the board anonymous or Customer-accessible.
+
 ## AuthService
 
-Inject `AuthService<typeof auth>` for programmatic access to better-auth API endpoints (e.g. `listUserAccounts`, `generateOpenAPISchema`, plugin methods).
+Inject `AuthService<Auth>` (`Auth` is `ReturnType<typeof createAuth>`) for programmatic access to better-auth API endpoints (e.g. `listUserAccounts`, `generateOpenAPISchema`, plugin methods). Passing the auth instance type is how plugin fields such as `user.role` (admin plugin) appear on `getSession()` and `@Session()`.
 
 ## Open API Plugin
 

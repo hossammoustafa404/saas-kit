@@ -17,6 +17,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Async functions | verb-first, no `async` prefix in name | `fetchUser`, not `asyncFetchUser` |
 
 - **ALWAYS** use `interface` for object shapes. Put module/feature-level ones in `interfaces/{name}.interface.ts` (`modules/{name}/interfaces/`, `features/{name}/interfaces/`). Shared infra uses `shared/{area}/interfaces/{name}.interface.ts`.
+- **ALWAYS** put enums in `enums/{name}.enum.ts` (`modules/{name}/enums/`, `features/{name}/enums/`). Shared infra uses `shared/{area}/enums/{name}.enum.ts`. Import from the folder barrel (`enums/index.ts`) inside the module or feature. **NEVER** declare an `enum` in a service, controller, hook, component, view, or other implementation file.
 - **NEVER** use `type` for an object shape (`type Foo = { ... }`). `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
 - **NEVER** declare object-shape interfaces in services, controllers, hooks, views, or other implementation files. Component-local props interfaces may stay colocated in the component file.
 - **NEVER** duplicate an `@saas-kit/schemas` contract as a local interface.
@@ -42,6 +43,8 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Frontend feature constants | `constants.ts` at the root | `features/users/constants.ts` |
 | Module/feature interfaces folder | `interfaces/` | `modules/auth/interfaces/`, `features/users/interfaces/` |
 | Interface file | `{name}.interface.ts` | `create-auth-options.interface.ts` |
+| Module/feature enums folder | `enums/` | `modules/auth/enums/`, `features/users/enums/` |
+| Enum file | `{name}.enum.ts` | `user-role.enum.ts` |
 | Barrel files | `index.ts` | `components/index.ts` |
 | Test files | same as source + `.test` or `.spec` | `user.service.spec.ts` |
 | Shared schema folders | `kebab-case/` matching the feature module | `health/`, `user/` |
@@ -59,6 +62,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - Feature folder: `kebab-case` matching the domain — `features/users/`, `features/order-items/`.
 - Root files inside a feature: `constants.ts`, `types.ts`, `utils.ts` — fixed names, lowercase.
 - **ALWAYS** put feature-level object-shape contracts in `interfaces/{name}.interface.ts` as `interface`. `types.ts` is for unions, aliases, and schema re-exports only.
+- **ALWAYS** put feature-level enums in `enums/{name}.enum.ts`. Import from `../enums`. **NEVER** declare an `enum` in a component, hook, view, or service.
 - **ALWAYS** put feature-level `SCREAMING_SNAKE_CASE` constants in `constants.ts`. **NEVER** declare them in other feature files.
 
 ### Components & Views
@@ -110,6 +114,8 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 | Module constants file | `{name}.constants.ts` at module root | `auth.constants.ts` |
 | Interface file | `{name}.interface.ts` in `interfaces/` | `create-auth-options.interface.ts` |
 | Interface | `PascalCase` | `CreateAuthOptions` |
+| Enum file | `{name}.enum.ts` in `enums/` | `user-role.enum.ts` |
+| Enum | `PascalCase` | `UserRole` |
 | Controller spec | colocated beside controller | `user.controller.spec.ts` |
 | Constants file | `{module}.constants.ts` | `observability.constants.ts` |
 | Interface folder | `interfaces/` | `shared/observability/interfaces/` |
@@ -122,6 +128,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - Feature/module folder: `kebab-case`, **singular** — `user/`, `order-item/`.
 - Module constants: `{name}.constants.ts` at the module or shared-area root — `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts`. **NEVER** a bare `constants.ts` on the server.
 - Module interfaces: `interfaces/{name}.interface.ts` — `export interface CreateAuthOptions`. Import from `interfaces/index.ts` inside the module.
+- Module enums: `enums/{name}.enum.ts` — `export enum UserRole`. Import from `enums/index.ts` inside the module. **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
 - REST route paths: `kebab-case`, plural nouns — `/users`, `/order-items` (route plural, module singular).
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.

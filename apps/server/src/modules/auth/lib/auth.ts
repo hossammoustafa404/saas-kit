@@ -5,6 +5,7 @@ import { adminAc, userAc } from 'better-auth/plugins/admin/access';
 import { EnvSchema } from '../../../shared/config/env.schema';
 import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
 import { VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
+import { UserRole } from '../enums';
 import type { CreateAuthOptions } from '../interfaces';
 
 export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
@@ -40,11 +41,11 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
     },
     plugins: [
       admin({
-        defaultRole: 'customer',
-        adminRoles: ['superadmin'],
+        defaultRole: UserRole.Customer,
+        adminRoles: [UserRole.SuperAdmin],
         roles: {
-          superadmin: adminAc,
-          customer: userAc,
+          [UserRole.SuperAdmin]: adminAc,
+          [UserRole.Customer]: userAc,
         },
       }),
       openAPI(),
@@ -55,3 +56,6 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
     },
   });
 }
+
+export type Auth = ReturnType<typeof createAuth>;
+

@@ -66,6 +66,9 @@
   ],
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.1",
+    "@bull-board/api": "^9.4.0",
+    "@bull-board/express": "^9.4.0",
+    "@bull-board/nestjs": "^9.4.0",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",

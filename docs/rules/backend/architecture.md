@@ -27,7 +27,8 @@ src/
 │   │       └── http-outcome-request.interface.ts
 │   ├── queue/
 │   │   ├── queue.module.ts
-│   │   └── queue.constants.ts
+│   │   ├── queue.constants.ts
+│   │   └── bull-board-auth.middleware.ts
 │   ├── mail/
 │   │   ├── mail.module.ts
 │   │   ├── mail.constants.ts
@@ -53,6 +54,8 @@ src/
         ├── interfaces/           # Internal shapes — not HTTP Zod contracts
         │   ├── index.ts
         │   └── {name}.interface.ts
+        ├── enums/                  # Module-scoped enums — `{name}.enum.ts`
+        │   └── index.ts
         └── services/               # One folder per action
             ├── index.ts            # Barrel — re-exports all action services
             ├── find-one-user/
@@ -66,6 +69,8 @@ src/
 ## Enforcement Rules
 
 - **ALWAYS** put module-level object-shape contracts in `modules/{name}/interfaces/{name}.interface.ts` as `interface` (barrel `interfaces/index.ts`). Shared infra object shapes live in `shared/{area}/interfaces/{name}.interface.ts` — import the concrete file, no `shared/` barrels.
+- **ALWAYS** put module-level enums in `modules/{name}/enums/{name}.enum.ts` (barrel `enums/index.ts`). Shared infra enums live in `shared/{area}/enums/{name}.enum.ts` — import the concrete file, no `shared/` barrels.
+- **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
 - **NEVER** declare object-shape `type` aliases or interfaces in services, controllers, hooks, or other implementation files.
 - **NEVER** use `type` for an object shape. `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
 - **NEVER** put HTTP contracts in `interfaces/` — those stay in `@saas-kit/schemas` and module `dto/`. **NEVER** define a parallel interface for a Zod schema.
@@ -145,6 +150,14 @@ export class UserController {
 - Import from the folder barrel within the module: `from "../../interfaces"`, not `from "../../interfaces/create-auth-options.interface"`.
 - HTTP request/response shapes stay in `@saas-kit/schemas` and `dto/`. Do not duplicate them as interfaces.
 
+## Module-Scoped Enums
+
+- Enums used **only within a module** live in `enums/` — `{name}.enum.ts`, re-exported from `enums/index.ts`.
+- **ALWAYS** use `enum`, never a string-union `type` for a closed set of named values (`UserRole`, not `type UserRole = 'superadmin' | 'customer'`).
+- Import from the folder barrel within the module: `from "../../enums"`, not `from "../../enums/user-role.enum"`.
+- **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
+- Cross-module consumers import public enums from `modules/{name}` or that module's `enums` barrel — **NEVER** a single `{name}.enum.ts` file across boundaries.
+
 ## Public API (Strict)
 
 Every feature exposes a controlled surface through `modules/{name}/index.ts`. Everything else is internal.
@@ -163,6 +176,7 @@ Every feature exposes a controlled surface through `modules/{name}/index.ts`. Ev
 | Prisma          | Data access only — no business rules in queries      |
 | DTO / Schema    | Input validation and output serialization           |
 | Interface       | Internal object-shape contracts — not HTTP          |
+| Enum            | Closed named value sets (`UserRole`, `OriginKind`)  |
 | Guard/Decorator | Module-scoped or library-provided access control    |
 
 ```ts

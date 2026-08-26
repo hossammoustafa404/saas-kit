@@ -35,7 +35,7 @@
 - Use getters/setters for controlled access and validation
 - Make members private/protected by default
 - Prefer immutability: `readonly` properties, `ReadonlyArray<T>`, `as const` assertions
-- Use `interface` for object shapes (in the module `interfaces/` folder). Use `type` only for unions, intersections, mapped types, function types, and Zod `z.infer`.
+- Use `interface` for object shapes (in the module `interfaces/` folder). Use `enum` for closed named value sets (in the module `enums/` folder). Use `type` only for unions, intersections, mapped types, function types, and Zod `z.infer`.
 
 ## 4. Classes
 

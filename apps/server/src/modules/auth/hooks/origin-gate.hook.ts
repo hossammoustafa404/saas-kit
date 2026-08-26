@@ -9,9 +9,7 @@ import {
 } from '@thallesp/nestjs-better-auth';
 import type { Env } from '../../../shared/config/env.schema';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
-
-type OriginKind = 'web' | 'admin' | 'tooling' | 'untrusted';
-type UserRole = 'superadmin' | 'customer';
+import { OriginKind, UserRole } from '../enums';
 
 @Hook()
 @Injectable()
@@ -48,8 +46,10 @@ export class OriginGateHook {
       return;
     }
 
-    const role: UserRole =
-      user.role === 'superadmin' ? 'superadmin' : 'customer';
+    const role =
+      user.role === UserRole.SuperAdmin
+        ? UserRole.SuperAdmin
+        : UserRole.Customer;
     if (!this.isSignInAllowed(this.classifyOrigin(ctx), role)) {
       this.throwInvalidEmailOrPassword();
     }
@@ -69,35 +69,35 @@ export class OriginGateHook {
     const apiOrigin = this.config.get('BETTER_AUTH_URL', { infer: true });
 
     if (origin === undefined || origin === apiOrigin) {
-      return 'tooling';
+      return OriginKind.Tooling;
     }
 
     if (origin === webOrigin) {
-      return 'web';
+      return OriginKind.Web;
     }
 
     if (origin === adminOrigin) {
-      return 'admin';
+      return OriginKind.Admin;
     }
 
-    return 'untrusted';
+    return OriginKind.Untrusted;
   }
 
   private isSignUpAllowed(kind: OriginKind): boolean {
-    return kind === 'web' || kind === 'tooling';
+    return kind === OriginKind.Web || kind === OriginKind.Tooling;
   }
 
   private isSignInAllowed(kind: OriginKind, role: UserRole): boolean {
-    if (kind === 'tooling') {
+    if (kind === OriginKind.Tooling) {
       return true;
     }
 
-    if (kind === 'web') {
-      return role === 'customer';
+    if (kind === OriginKind.Web) {
+      return role === UserRole.Customer;
     }
 
-    if (kind === 'admin') {
-      return role === 'superadmin';
+    if (kind === OriginKind.Admin) {
+      return role === UserRole.SuperAdmin;
     }
 
     return false;

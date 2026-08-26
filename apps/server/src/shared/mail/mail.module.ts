@@ -1,3 +1,5 @@
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -26,6 +28,10 @@ import { SendMailProcessor } from './send-mail.processor';
         removeOnComplete: MAIL_KEEP_COMPLETED_JOBS,
         removeOnFail: MAIL_KEEP_FAILED_JOBS,
       },
+    }),
+    BullBoardModule.forFeature({
+      name: MAIL_QUEUE,
+      adapter: BullMQAdapter,
     }),
   ],
   providers: [
