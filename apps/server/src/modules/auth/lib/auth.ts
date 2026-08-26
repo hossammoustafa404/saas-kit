@@ -36,5 +36,8 @@ export function createAuth(prisma: PrismaClient) {
       openAPI(),
     ],
     hooks: {},
+    logger: {
+      disabled: true,
+    },
   });
 }

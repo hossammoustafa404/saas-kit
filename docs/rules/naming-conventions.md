@@ -38,6 +38,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 - **NEVER** use `index.tsx` for components — only `index.ts` for barrels.
 - **NEVER** mix cases in a single filename (`userCard.tsx`, `User-card.tsx`).
+- Frontend feature root files (`constants.ts`, `types.ts`, `utils.ts`) apply **only** to `apps/web` and `apps/admin`. **NEVER** copy those names into `apps/server` — backend uses `{module}.constants.ts` and `interfaces/{name}.interface.ts`. See Backend below.
 
 ## Frontend (Next.js / React)
 
@@ -82,15 +83,22 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 | Kind | Case | Example |
 |---|---|---|
-| Module | `PascalCase` + `Module` (singular) | `UserModule` |
+| Module | `PascalCase` + `Module` (singular) | `UserModule`, `ObservabilityModule` |
 | Controller | `PascalCase` + `Controller` (singular) | `UserController` |
+| Shared infra service | `PascalCase` matching the module + `Service` | `ObservabilityService`, `PrismaService` |
 | Action service | `PascalCase` verb + resource + `Service` | `FindOneUserService` |
 | Guard / Interceptor / Pipe | `PascalCase` + kind | `CanUpdateUserGuard` |
-| Module file | `kebab-case.module.ts` (singular) | `user.module.ts` |
+| Module file | `kebab-case.module.ts` (singular) | `user.module.ts`, `observability.module.ts` |
+| Shared infra service file | `{module}.service.ts` matching the module | `observability.service.ts` |
 | Controller file | `kebab-case.controller.ts` (singular) | `user.controller.ts` |
 | Action service folder | `{verb}-{resource}/` | `find-one-user/` |
 | Action service file | `{verb}-{resource}.service.ts` | `find-one-user/find-one-user.service.ts` |
 | Controller spec | colocated beside controller | `user.controller.spec.ts` |
+| Constants file | `{module}.constants.ts` | `observability.constants.ts` |
+| Interface folder | `interfaces/` | `shared/observability/interfaces/` |
+| Interface file | `{name}.interface.ts` — **one interface per file** | `http-outcome-request.interface.ts` |
+| Filter file | `{name}.filter.ts` inside the owning module | `observability/filters/http-outcome.filter.ts` |
+| Interceptor file | `{name}.interceptor.ts` inside the owning module | `modules/{name}/interceptors/{name}.interceptor.ts` |
 | DTO file | `kebab-case.dto.ts` or verb-based | `create-user.dto.ts` |
 | DTO class | `PascalCase` + `Dto` | `CreateUserDto` |
 
@@ -98,8 +106,16 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - REST route paths: `kebab-case`, plural nouns — `/users`, `/order-items` (route plural, module singular).
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.
-- Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`.
-- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`.
+- Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`, `observability.service.spec.ts`.
+- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/`, `shared/observability/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`. **NEVER** `shared/filters/` or `shared/interceptors/` — those kinds live in the owning module (`shared/observability/filters/`).
+- Shared infra service is named after the **module** (`ObservabilityService` next to `ObservabilityModule`), like `PrismaService`. Verb-resource names (`LogHttpOutcomeService`) are **only** for feature action services.
+- Injected constructor params are the class name in `camelCase`. Shared infra **keeps** the `Service` suffix: `observabilityService: ObservabilityService`. **NEVER** `observability`. Action services **drop** `Service` because the field is the use case: `findOneUser: FindOneUserService`.
+- Constants live in `{module}.constants.ts` at the module root (`observability.constants.ts`). Values inside remain `SCREAMING_SNAKE_CASE`.
+- Internal object shapes that are not Zod HTTP contracts live in `interfaces/`. **ALWAYS** one exported `interface` per `{name}.interface.ts` file. Re-export from `interfaces/index.ts`. Import from that barrel.
+- **NEVER** `constants.ts` (bare name) in `apps/server`.
+- **NEVER** `types.ts` in `apps/server`.
+- **NEVER** dump multiple interfaces into one file.
+- **NEVER** use frontend `types.ts` / `constants.ts` layout on the server.
 
 ## Shared Schemas (Zod)
 

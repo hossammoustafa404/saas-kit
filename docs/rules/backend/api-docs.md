@@ -360,7 +360,7 @@ export class UserController {
 
 ## Error Response Shape
 
-Document a consistent Nest HTTP exception envelope on endpoints that can fail (`statusCode`, `message`, `error`). Keep that schema with the exception filter when one exists — **NEVER** in `shared/swagger/`.
+Document a consistent Nest HTTP exception envelope on endpoints that can fail (`statusCode`, `message`, `error`). Keep that schema with the exception filter in the owning module (`shared/observability/filters/`) when one exists — **NEVER** in `shared/swagger/`. **NEVER** `shared/filters/`.
 
 ## Query Params & Pagination
 

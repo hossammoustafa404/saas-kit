@@ -10,6 +10,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   const config = app.get(ConfigService<Env, true>);
   const globalPrefix = 'api';
+  const port = config.get('PORT', { infer: true });
+
   app.setGlobalPrefix(globalPrefix);
   app.enableCors({
     origin: [
@@ -20,8 +22,9 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(new ZodValidationPipe());
+
   setupSwagger(app);
-  const port = config.get('PORT', { infer: true });
+
   await app.listen(port);
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
