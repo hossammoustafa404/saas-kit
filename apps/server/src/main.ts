@@ -1,15 +1,20 @@
 import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { AppModule } from './app.module';
-import { AUTH_DOCS_ROUTE } from './modules/auth';
+import { AUTH_DOCS_ROUTE } from './modules/auth/auth.constants';
 import type { Env } from './shared/config/env.schema';
+import { startOtel } from './shared/observability/otel';
 import { BULL_BOARD_ROUTE } from './shared/queue/queue.constants';
 import { setupSwagger } from './shared/swagger/setup-swagger';
 
 async function bootstrap() {
+  await startOtel();
+
+  const { NestFactory } = await import('@nestjs/core');
+  const { AppModule } = await import('./app.module.js');
+
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.enableShutdownHooks();
   const config = app.get(ConfigService<Env, true>);
   const globalPrefix = 'api';
   const port = config.get('PORT', { infer: true });

@@ -31,7 +31,7 @@ export class ObservabilityService {
     }
 
     const reason = STATUS_CODES[statusCode] ?? UNKNOWN_STATUS_REASON;
-    const message = `${statusCode} ${reason}${routeSuffix(request)}`;
+    const message = `${statusCode} ${reason}${this.routeSuffix(request)}`;
 
     if (statusCode >= MIN_SERVER_ERROR) {
       const stack = exception instanceof Error ? exception.stack : undefined;
@@ -50,28 +50,28 @@ export class ObservabilityService {
   hasLogged(response: HttpOutcomeResponse): boolean {
     return Boolean(response[HTTP_OUTCOME_LOGGED]);
   }
-}
 
-function routeSuffix(request: HttpOutcomeRequest | undefined): string {
-  if (request === undefined) {
-    return '';
+  private routeSuffix(request: HttpOutcomeRequest | undefined): string {
+    if (request === undefined) {
+      return '';
+    }
+
+    const path = this.pathWithoutQuery(request.originalUrl ?? request.url);
+    if (path === undefined) {
+      return '';
+    }
+
+    return request.method === undefined
+      ? ` ${path}`
+      : ` ${request.method} ${path}`;
   }
 
-  const path = pathWithoutQuery(request.originalUrl ?? request.url);
-  if (path === undefined) {
-    return '';
+  private pathWithoutQuery(url: string | undefined): string | undefined {
+    if (url === undefined || url === '') {
+      return undefined;
+    }
+
+    const queryIndex = url.search(/[?#]/);
+    return queryIndex === -1 ? url : url.slice(0, queryIndex);
   }
-
-  return request.method === undefined
-    ? ` ${path}`
-    : ` ${request.method} ${path}`;
-}
-
-function pathWithoutQuery(url: string | undefined): string | undefined {
-  if (url === undefined || url === '') {
-    return undefined;
-  }
-
-  const queryIndex = url.search(/[?#]/);
-  return queryIndex === -1 ? url : url.slice(0, queryIndex);
 }

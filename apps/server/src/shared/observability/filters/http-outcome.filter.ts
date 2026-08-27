@@ -21,7 +21,7 @@ export class HttpOutcomeFilter extends BaseExceptionFilter {
     const http = host.switchToHttp();
 
     const didLog = this.observabilityService.log({
-      statusCode: httpStatusOf(exception),
+      statusCode: this.httpStatusOf(exception),
       exception,
       request: http.getRequest<HttpOutcomeRequest>(),
     });
@@ -34,12 +34,12 @@ export class HttpOutcomeFilter extends BaseExceptionFilter {
 
     super.catch(exception, host);
   }
-}
 
-function httpStatusOf(exception: unknown): number {
-  if (exception instanceof HttpException) {
-    return exception.getStatus();
+  private httpStatusOf(exception: unknown): number {
+    if (exception instanceof HttpException) {
+      return exception.getStatus();
+    }
+
+    return HttpStatus.INTERNAL_SERVER_ERROR;
   }
-
-  return HttpStatus.INTERNAL_SERVER_ERROR;
 }

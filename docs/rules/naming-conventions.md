@@ -129,6 +129,7 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 - Module constants: `{name}.constants.ts` at the module or shared-area root — `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts`. **NEVER** a bare `constants.ts` on the server.
 - Module interfaces: `interfaces/{name}.interface.ts` — `export interface CreateAuthOptions`. Import from `interfaces/index.ts` inside the module.
 - Module enums: `enums/{name}.enum.ts` — `export enum UserRole`. Import from `enums/index.ts` inside the module. **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
+- **NEVER** declare file-level helper functions beside a class (service, controller, filter, interceptor, hook, processor, guard). Use `private` methods. Spec files may keep local factories. Function modules with no class may keep file-level helpers.
 - REST route paths: `kebab-case`, plural nouns — `/users`, `/order-items` (route plural, module singular).
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.

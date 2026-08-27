@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { HealthDto } from './dto';

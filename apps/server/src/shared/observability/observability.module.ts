@@ -1,11 +1,17 @@
-import { Module, type NestModule } from '@nestjs/common';
-import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
+import {
+  Module,
+  type BeforeApplicationShutdown,
+  type NestModule,
+} from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR, HttpAdapterHost } from '@nestjs/core';
 import { HttpOutcomeFilter } from './filters';
+import { HttpSpanStatusInterceptor } from './interceptors';
 import type {
   FinishableHttpOutcomeResponse,
   HttpOutcomeRequest,
 } from './interfaces';
 import { RESPONSE_FINISH_EVENT } from './observability.constants';
+import { shutdownOtel } from './otel';
 import { ObservabilityService, PosthogService } from './services';
 
 @Module({
@@ -16,10 +22,16 @@ import { ObservabilityService, PosthogService } from './services';
       provide: APP_FILTER,
       useClass: HttpOutcomeFilter,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpSpanStatusInterceptor,
+    },
   ],
   exports: [ObservabilityService, PosthogService],
 })
-export class ObservabilityModule implements NestModule {
+export class ObservabilityModule
+  implements NestModule, BeforeApplicationShutdown
+{
   constructor(
     private readonly adapterHost: HttpAdapterHost,
     private readonly observabilityService: ObservabilityService,
@@ -45,5 +57,9 @@ export class ObservabilityModule implements NestModule {
         next();
       },
     );
+  }
+
+  async beforeApplicationShutdown(): Promise<void> {
+    await shutdownOtel();
   }
 }

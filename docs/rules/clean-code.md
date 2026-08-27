@@ -43,6 +43,8 @@
 - Maintain high cohesion and low coupling
 - Prefer composition over inheritance
 - Use method chaining (return `this`) for fluent APIs
+- **ALWAYS** put helpers that exist only to serve a class as `private` methods on that class
+- **NEVER** declare file-level `function` helpers beside an `export class`. Spec files may keep local factories. Files that export only functions (no class) may keep file-level helpers
 
 ## 5. SOLID Principles
 

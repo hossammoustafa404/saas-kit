@@ -77,6 +77,7 @@ src/
 - **ALWAYS** put module-level enums in `modules/{name}/enums/{name}.enum.ts` (barrel `enums/index.ts`). Shared infra enums live in `shared/{area}/enums/{name}.enum.ts` — import the concrete file, no `shared/` barrels.
 - **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
 - **NEVER** declare object-shape `type` aliases or interfaces in services, controllers, hooks, or other implementation files.
+- **NEVER** declare file-level helper functions beside a class. Helpers that exist only to serve that class are `private` methods on it. Spec files may keep local factories. Files that export only functions (no class) may keep file-level helpers. See `clean-code.md`, `nestjs.md`.
 - **NEVER** use `type` for an object shape. `type` is only for unions, intersections, mapped types, function types, and Zod `z.infer`.
 - **NEVER** put HTTP contracts in `interfaces/` — those stay in `@saas-kit/schemas` and module `dto/`. **NEVER** define a parallel interface for a Zod schema.
 - **ALWAYS** put module-level `SCREAMING_SNAKE_CASE` constants in `modules/{name}/{name}.constants.ts`. Shared infra constants live in `shared/{area}/{area}.constants.ts`. **NEVER** a bare `constants.ts` on the server.
