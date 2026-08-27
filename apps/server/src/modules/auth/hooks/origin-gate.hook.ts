@@ -63,20 +63,20 @@ export class OriginGateHook {
   }
 
   private classifyOrigin(ctx: AuthHookContext): OriginKind {
-    const origin = this.originFromContext(ctx);
-    const webOrigin = this.config.get('WEB_ORIGIN', { infer: true });
-    const adminOrigin = this.config.get('ADMIN_ORIGIN', { infer: true });
-    const apiOrigin = this.config.get('BETTER_AUTH_URL', { infer: true });
-
-    if (origin === undefined || origin === apiOrigin) {
+    const origin = ctx.headers?.get('origin');
+    if (
+      origin == null ||
+      origin === '' ||
+      origin === this.config.get('BETTER_AUTH_URL', { infer: true })
+    ) {
       return OriginKind.Tooling;
     }
 
-    if (origin === webOrigin) {
+    if (origin === this.config.get('WEB_ORIGIN', { infer: true })) {
       return OriginKind.Web;
     }
 
-    if (origin === adminOrigin) {
+    if (origin === this.config.get('ADMIN_ORIGIN', { infer: true })) {
       return OriginKind.Admin;
     }
 
@@ -117,11 +117,6 @@ export class OriginGateHook {
     if (user) {
       this.throwUserAlreadyExists();
     }
-  }
-
-  private originFromContext(ctx: AuthHookContext): string | undefined {
-    const origin = ctx.headers?.get('origin');
-    return origin === null || origin === '' ? undefined : origin;
   }
 
   private emailFromBody(ctx: AuthHookContext): string | undefined {

@@ -9,7 +9,7 @@ import {
   type LoggerService,
 } from '@nestjs/common';
 import { BaseExceptionFilter, type HttpAdapterHost } from '@nestjs/core';
-import { ObservabilityService } from '../observability.service';
+import { ObservabilityService } from '../services';
 import { HttpOutcomeFilter } from './http-outcome.filter';
 
 const EMAIL = 'pii-user@example.com';

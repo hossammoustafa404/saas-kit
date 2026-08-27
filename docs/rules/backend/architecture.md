@@ -17,8 +17,13 @@ src/
 │   │   └── prisma.service.ts
 │   ├── observability/
 │   │   ├── observability.module.ts
-│   │   ├── observability.service.ts      # Matches the module — not a verb-resource action service
 │   │   ├── observability.constants.ts    # NEVER constants.ts
+│   │   ├── services/                     # One folder per service
+│   │   │   ├── index.ts
+│   │   │   ├── observability/
+│   │   │   │   └── observability.service.ts
+│   │   │   └── posthog/
+│   │   │       └── posthog.service.ts    # capture() — never throws
 │   │   ├── filters/                      # HTTP outcome filter — Nest throws
 │   │   │   ├── index.ts
 │   │   │   └── http-outcome.filter.ts
@@ -83,20 +88,20 @@ src/
 - Each feature is a self-contained NestJS module with controller, action services, DTOs, and scoped guards/decorators.
 - Register feature modules in `app.module.ts` — do not nest feature modules inside each other unless there is a genuine parent/child domain relationship.
 - Infrastructure used by multiple modules (`prisma`, `config`, `observability`, `queue`, `mail`) lives in `shared/` — not inside feature modules.
-- Shared infra is named after the folder: `ObservabilityModule` + `ObservabilityService` + `observability.constants.ts`. Do not invent a verb-resource service (`LogHttpOutcomeService`) for shared infra.
+- Shared infra is named after the folder: `ObservabilityModule` + `observability.constants.ts`. When a shared area owns more than one service, each lives in `services/{name}/` (`ObservabilityService`, `PosthogService`). A single-service area stays next to the module (`PrismaService`). Do not invent a verb-resource service (`LogHttpOutcomeService`) for shared infra.
 - Filters and interceptors live **inside the module that owns the concern** (`shared/observability/filters/`, or `modules/{name}/filters/` when the concern is a feature). Register globals with `APP_FILTER` / `APP_INTERCEPTOR` in that module's `providers`.
 - HTTP 4xx/5xx from Nest **throw**. The observability **filter** logs them. better-auth (no Nest throw) is logged on Express `finish`. **NEVER** a global interceptor that treats a Nest handler return as 4xx/5xx — that return must not happen. See `controllers.md`.
 - **NEVER** `shared/filters/` or `shared/interceptors/` as a dumping ground. **NEVER** `new` a module-owned filter or interceptor in `main.ts`.
 - Constants: `{module}.constants.ts` at the module root. **NEVER** `constants.ts`.
 - Internal interfaces: `interfaces/{name}.interface.ts` — **one exported interface per file**. Re-export from `interfaces/index.ts`. **NEVER** `types.ts`. **NEVER** put several interfaces in one file. HTTP contracts stay in `@saas-kit/schemas`, not here.
 - **NEVER** apply frontend feature root files (`constants.ts`, `types.ts`) to `apps/server`.
-- **NEVER** create `shared/index.ts` or `shared/swagger/index.ts`. Import from the concrete file (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/observability/observability.module`, `shared/queue/queue.module`, `shared/mail/mail.module`, `shared/swagger/setup-swagger`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) and folder barrels (`interfaces/index.ts`) stay required.
+- **NEVER** create `shared/index.ts` or `shared/swagger/index.ts`. Import from the concrete file (`shared/config/config.module`, `shared/prisma/prisma.module`, `shared/observability/observability.module`, `shared/queue/queue.module`, `shared/mail/mail.module`, `shared/swagger/setup-swagger`, `shared/config/env.schema`). Feature-module barrels (`modules/{name}/index.ts`) and folder barrels (`interfaces/index.ts`, `services/index.ts`) stay required.
 - **NEVER** create `shared/docs/`. Swagger lives in `shared/swagger/setup-swagger.ts` only — DocumentBuilder metadata stays in that file. **NEVER** split a `swagger.config.ts`. **NEVER** put error envelopes, Scalar, or other docs products in `shared/swagger/`.
 - **NEVER** export env schemas from `@saas-kit/schemas`. Server process config stays in `shared/config/`. HTTP contracts stay in `@saas-kit/schemas`.
 
 ## Action Services (One Folder Per Action)
 
-- This section applies to **feature modules** under `modules/` only. Shared infra (`shared/prisma/prisma.service.ts`, `shared/observability/observability.service.ts`) uses one service named after the module.
+- This section applies to **feature modules** under `modules/` only. Shared infra with one service keeps `{area}.service.ts` next to the module (`shared/prisma/prisma.service.ts`). Observability owns more than one service under `services/{name}/` (`ObservabilityService`, `PosthogService`) — still named after the capability, not verb-resource.
 - **NEVER** create a monolithic `{domain}.service.ts` with all CRUD methods inside a feature module.
 - Each use case gets its own folder under `services/` containing the service and its spec.
 - Folder name: `{verb}-{resource}/` — `find-one-user/`, `create-user/`.

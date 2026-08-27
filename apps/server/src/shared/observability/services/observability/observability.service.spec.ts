@@ -1,7 +1,7 @@
 import { STATUS_CODES } from 'node:http';
 import type { LoggerService } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import type { HttpOutcomeRequest } from './interfaces';
+import type { HttpOutcomeRequest } from '../../interfaces';
 import { ObservabilityService } from './observability.service';
 
 const EMAIL = 'pii-user@example.com';

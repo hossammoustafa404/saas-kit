@@ -14,12 +14,16 @@ src/
         │   ├── origin-kind.enum.ts
         │   └── user-role.enum.ts
         ├── interfaces/
-        │   └── create-auth-options.interface.ts
+        │   ├── create-auth-options.interface.ts
+        │   ├── auth-event-user.interface.ts
+        │   ├── capture-auth-event-input.interface.ts
+        │   └── auth-hook-user-context.interface.ts
         ├── lib/
         │   └── auth.ts           # betterAuth({ ... }) instance
         ├── auth.module.ts
         └── hooks/
-            └── origin-gate.hook.ts
+            ├── origin-gate.hook.ts
+            └── auth-events.hook.ts
 ```
 
 ## Setup
@@ -111,6 +115,8 @@ export class SignUpHook {
   }
 }
 ```
+
+Auth product Events (`user signed up`, `user signed in`, `user signed out`) are captured from `AuthEventsHook` via `PosthogService`. Sign-up and sign-in use AfterHooks. Sign-out uses `@AfterDelete("session")` because `/sign-out` does not run `sessionMiddleware`, so `ctx.context.session` is null on HTTP hooks. The database hook receives the Session row (`userId`) and the endpoint context (Origin, path). Only `/sign-out` is captured so Session expiry on get-session and revoke are not Events. `PosthogService.capture()` swallows PostHog failures so they cannot 500 auth. Origin-gate stays policy-only BeforeHooks. Requires `hooks: {}` and `databaseHooks: {}` in `createAuth`.
 
 ## Email verification and queued mail
 
