@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { BaseExceptionFilter, HttpAdapterHost } from '@nestjs/core';
 import type { HttpOutcomeRequest, HttpOutcomeResponse } from '../interfaces';
-import { ObservabilityService } from '../observability.service';
+import { ObservabilityService } from '../services';
 
 @Catch()
 export class HttpOutcomeFilter extends BaseExceptionFilter {

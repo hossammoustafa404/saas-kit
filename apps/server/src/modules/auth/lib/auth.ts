@@ -61,6 +61,7 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
       openAPI(),
     ],
     hooks: {},
+    databaseHooks: {},
     logger: {
       disabled: true,
     },

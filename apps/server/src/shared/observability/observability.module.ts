@@ -6,17 +6,18 @@ import type {
   HttpOutcomeRequest,
 } from './interfaces';
 import { RESPONSE_FINISH_EVENT } from './observability.constants';
-import { ObservabilityService } from './observability.service';
+import { ObservabilityService, PosthogService } from './services';
 
 @Module({
   providers: [
     ObservabilityService,
+    PosthogService,
     {
       provide: APP_FILTER,
       useClass: HttpOutcomeFilter,
     },
   ],
-  exports: [ObservabilityService],
+  exports: [ObservabilityService, PosthogService],
 })
 export class ObservabilityModule implements NestModule {
   constructor(

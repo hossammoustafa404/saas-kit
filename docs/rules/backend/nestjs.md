@@ -10,7 +10,7 @@
 - Validate env with a Zod schema colocated in `shared/config/env.schema.ts`. **NEVER** name it `env.ts`. **NEVER** put that schema in `@saas-kit/schemas`. **NEVER** add `env.schema.spec.ts`. See `validation.md`, `testing.md`.
 - Load `apps/server/.env` by path from the server project root — `nx serve` cwd is the workspace root, so `envFilePath: '.env'` will miss the file.
 - Use `Logger` from `@nestjs/common` with a context string matching the class name.
-- Shared infra is named after the module (`ObservabilityModule` / `ObservabilityService` / `observability.constants.ts`). Internal interfaces live one-per-file under `interfaces/`. Filters that belong to that module live in `filters/` beside it, registered with `APP_FILTER`. **NEVER** an observability interceptor that reads `res.statusCode` after a Nest handler returns — Nest 4xx/5xx throw. **NEVER** `types.ts` or `constants.ts` on the server. **NEVER** `shared/filters/` or `shared/interceptors/` as a dump. See `naming-conventions.md`, `architecture.md`.
+- Shared infra is named after the module (`ObservabilityModule` / `observability.constants.ts`). Services live under `services/{name}/` (`ObservabilityService`, `PosthogService`). Internal interfaces live one-per-file under `interfaces/`. Filters that belong to that module live in `filters/` beside it, registered with `APP_FILTER`. **NEVER** an observability interceptor that reads `res.statusCode` after a Nest handler returns — Nest 4xx/5xx throw. **NEVER** `types.ts` or `constants.ts` on the server. **NEVER** `shared/filters/` or `shared/interceptors/` as a dump. See `naming-conventions.md`, `architecture.md`.
 
 ## Global Setup (`main.ts`)
 

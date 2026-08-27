@@ -9,13 +9,13 @@ import type {
   HttpOutcomeRequest,
   HttpOutcomeResponse,
   LogHttpOutcomeInput,
-} from './interfaces';
+} from '../../interfaces';
 import {
   HTTP_OUTCOME_LOGGED,
   MIN_CLIENT_ERROR,
   MIN_SERVER_ERROR,
   UNKNOWN_STATUS_REASON,
-} from './observability.constants';
+} from '../../observability.constants';
 
 @Injectable()
 export class ObservabilityService {
