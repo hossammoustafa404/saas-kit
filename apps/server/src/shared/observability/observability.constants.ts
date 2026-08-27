@@ -7,3 +7,4 @@ export const OTEL_SERVICE_NAME = 'saas-kit-server';
 export const HEALTH_TRACE_PATH = '/api/health';
 export const HEALTH_TRACE_METHOD = 'GET';
 export const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com';
+export const OTEL_SHUTDOWN_KEEP_ALIVE_MS = 60_000;

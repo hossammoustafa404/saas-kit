@@ -18,7 +18,7 @@
 - Create app with `bodyParser: false` for better-auth. See `authentication.md`.
 - Enable `ZodValidationPipe` globally. See `validation.md`.
 - Do not `new` observability (or other module-owned) filters and interceptors here — `ObservabilityModule` registers `APP_FILTER` and `APP_INTERCEPTOR`.
-- Enable shutdown hooks so `beforeApplicationShutdown` can flush the OpenTelemetry SDK. Shutdown failures must not crash the process.
+- Enable shutdown hooks so `beforeApplicationShutdown` can flush the OpenTelemetry SDK. Shutdown failures must not crash the process. `otel.ts` also **awaits** SDK shutdown on SIGTERM and holds the event loop until the flush completes — do not fire-and-forget (`void shutdownOtel()`), or traces can be lost if Kubernetes (or another supervisor) sends SIGTERM before Nest hooks are enabled.
 - Enable CORS with allowed origins from config (`trustedOrigins` must align with better-auth).
 - Set a global prefix (e.g. `/api`) if required by clients. Exclude `api/queues` so Bull Board is not double-prefixed — its route already includes `api`. See `authentication.md`.
 - Set up Swagger in every environment (`/api/docs` and `/api/docs-json`). Do not gate on `NODE_ENV`. Try it out must send credentials and is subject to the same auth as the live API. See `api-docs.md`, `security.md`.

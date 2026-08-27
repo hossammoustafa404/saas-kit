@@ -14,6 +14,7 @@ import {
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
   OTEL_SERVICE_NAME,
+  OTEL_SHUTDOWN_KEEP_ALIVE_MS,
 } from './observability.constants';
 import { isObservabilityEnabled, posthogOtlp } from './utils';
 
@@ -78,9 +79,7 @@ export async function startOtel(): Promise<void> {
     return;
   }
 
-  process.once('SIGTERM', () => {
-    void shutdownOtel();
-  });
+  process.once('SIGTERM', handleOtelSigterm);
 }
 
 export async function shutdownOtel(): Promise<void> {
@@ -103,6 +102,15 @@ export async function shutdownOtel(): Promise<void> {
   });
 
   return shutdownPromise;
+}
+
+export async function handleOtelSigterm(): Promise<void> {
+  const keepAlive = setInterval(() => undefined, OTEL_SHUTDOWN_KEEP_ALIVE_MS);
+  try {
+    await shutdownOtel();
+  } finally {
+    clearInterval(keepAlive);
+  }
 }
 
 function isHealthTrace(request: IncomingMessage): boolean {
