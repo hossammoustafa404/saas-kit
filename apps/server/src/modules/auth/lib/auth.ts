@@ -5,10 +5,17 @@ import { admin, openAPI, organization } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
 import { EnvSchema } from '../../../shared/config/env.schema';
 import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
-import { AUTH_BASE_PATH, VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
+import {
+  ACCEPT_INVITATION_PATH,
+  AUTH_BASE_PATH,
+  INVITATION_EMAIL_SUBJECT,
+  VERIFICATION_EMAIL_SUBJECT,
+} from '../auth.constants';
 import { MemberRole, UserRole } from '../enums';
 import type { CreateAuthOptions } from '../interfaces';
+import { addMemberPlugin } from '../plugins/add-member.plugin';
 import { httpObservabilityPlugin } from '../plugins/http-observability.plugin';
+import { createOrganizationHooks } from './organization-hooks';
 
 const logger = new Logger('createAuth');
 
@@ -73,7 +80,24 @@ export function createAuth({
         dynamicAccessControl: {
           enabled: false,
         },
+        organizationHooks: createOrganizationHooks(prisma),
+        sendInvitationEmail: async (data) => {
+          try {
+            await mailQueue.add(MAIL_SEND_JOB, {
+              to: data.email,
+              subject: INVITATION_EMAIL_SUBJECT,
+              text: `You were invited to join ${data.organization.name}. Accept at:\n${env.WEB_ORIGIN}${ACCEPT_INVITATION_PATH}/${data.id}`,
+              html: '',
+            });
+          } catch (error) {
+            logger.error(
+              'Failed to enqueue invitation email',
+              error instanceof Error ? error.stack : undefined,
+            );
+          }
+        },
       }),
+      addMemberPlugin(prisma),
       openAPI(),
       ...(observabilityService === undefined
         ? []
