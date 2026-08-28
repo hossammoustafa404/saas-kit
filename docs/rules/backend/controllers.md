@@ -21,7 +21,7 @@
 ## Error Responses
 
 - Throw NestJS HTTP exceptions (`NotFoundException`, `ForbiddenException`, `BadRequestException`).
-- **NEVER** return 4xx/5xx from a Nest handler by setting `res.statusCode` (or `@HttpCode(4xx)`) and returning a body. Failures throw; the observability exception filter logs them.
+- **NEVER** return 4xx/5xx from a Nest handler by setting `res.statusCode` (or `@HttpCode(4xx)`) and returning a body. Failures throw; `HttpObservabilityFilter` logs them.
 - Never leak stack traces or internal details in production responses.
 - Map Zod validation failures to `400 Bad Request` via the global validation pipe.
 
@@ -29,26 +29,26 @@
 
 ```ts
 // modules/user/user.controller.ts
-import { Controller, Get, Post, Body, Param } from "@nestjs/common";
-import { Session, UserSession } from "@thallesp/nestjs-better-auth";
-import { CreateUserSchema, type CreateUserInput } from "@saas-kit/schemas";
-import { ZodValidationPipe } from "nestjs-zod";
-import { FindOneUserService, CreateUserService } from "./services";
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Session, UserSession } from '@thallesp/nestjs-better-auth';
+import { CreateUserSchema, type CreateUserInput } from '@saas-kit/schemas';
+import { ZodValidationPipe } from 'nestjs-zod';
+import { FindOneUserService, CreateUserService } from './services';
 
-@Controller("users")
+@Controller('users')
 export class UserController {
   constructor(
     private readonly findOneUserService: FindOneUserService,
     private readonly createUserService: CreateUserService,
   ) {}
 
-  @Get("me")
+  @Get('me')
   me(@Session() session: UserSession) {
     return session;
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
+  @Get(':id')
+  findOne(@Param('id') id: string) {
     return this.findOneUserService.execute(id);
   }
 

@@ -1,30 +1,30 @@
 import {
   Module,
+  RequestMethod,
   type BeforeApplicationShutdown,
+  type MiddlewareConsumer,
   type NestModule,
 } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR, HttpAdapterHost } from '@nestjs/core';
-import { HttpOutcomeFilter } from './filters';
-import { HttpSpanStatusInterceptor } from './interceptors';
-import type {
-  FinishableHttpOutcomeResponse,
-  HttpOutcomeRequest,
-} from './interfaces';
-import { RESPONSE_FINISH_EVENT } from './observability.constants';
-import { shutdownOtel } from './otel';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { HttpObservabilityFilter } from './filters';
+import { HttpObservabilityInterceptor } from './interceptors';
+import { shutdownOtel } from './lib/otel';
+import { HttpObservabilityMiddleware } from './middlewares';
+import { AUTH_TRACE_PATH_PREFIX } from './observability.constants';
 import { ObservabilityService, PosthogService } from './services';
 
 @Module({
   providers: [
     ObservabilityService,
     PosthogService,
+    HttpObservabilityMiddleware,
     {
       provide: APP_FILTER,
-      useClass: HttpOutcomeFilter,
+      useClass: HttpObservabilityFilter,
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: HttpSpanStatusInterceptor,
+      useClass: HttpObservabilityInterceptor,
     },
   ],
   exports: [ObservabilityService, PosthogService],
@@ -32,31 +32,16 @@ import { ObservabilityService, PosthogService } from './services';
 export class ObservabilityModule
   implements NestModule, BeforeApplicationShutdown
 {
-  constructor(
-    private readonly adapterHost: HttpAdapterHost,
-    private readonly observabilityService: ObservabilityService,
-  ) {}
+  configure(consumer: MiddlewareConsumer): void {
+    const authPath = AUTH_TRACE_PATH_PREFIX.slice(1);
 
-  configure(): void {
-    this.adapterHost.httpAdapter.use(
-      (
-        request: HttpOutcomeRequest,
-        response: FinishableHttpOutcomeResponse,
-        next: () => void,
-      ) => {
-        response.on(RESPONSE_FINISH_EVENT, () => {
-          if (this.observabilityService.hasLogged(response)) {
-            return;
-          }
-
-          this.observabilityService.log({
-            statusCode: response.statusCode,
-            request,
-          });
-        });
-        next();
-      },
-    );
+    consumer
+      .apply(HttpObservabilityMiddleware)
+      .exclude(
+        { path: authPath, method: RequestMethod.ALL },
+        { path: `${authPath}/(.*)`, method: RequestMethod.ALL },
+      )
+      .forRoutes('*');
   }
 
   async beforeApplicationShutdown(): Promise<void> {

@@ -1,5 +1,6 @@
 export const VERIFICATION_EMAIL_SUBJECT = 'Verify your email';
-export const AUTH_DOCS_ROUTE = '/api/auth/reference';
+export const AUTH_BASE_PATH = '/api/auth';
+export const AUTH_DOCS_ROUTE = `${AUTH_BASE_PATH}/reference`;
 export const AUTH_EVENT_SOURCE = 'server';
 
 export const AuthEvents = {

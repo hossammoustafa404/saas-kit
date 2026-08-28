@@ -1,7 +1,11 @@
 import { STATUS_CODES } from 'node:http';
-import type { LoggerService } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  type LoggerService,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { HttpOutcomeRequest } from '../../interfaces';
+import { UNKNOWN_ROUTE } from '../../observability.constants';
 import { ObservabilityService } from './observability.service';
 
 const EMAIL = 'pii-user@example.com';
@@ -22,63 +26,107 @@ describe('ObservabilityService', () => {
       const logger = createLogger();
       const service = new ObservabilityService(logger);
 
-      const didLog = service.log({
+      service.logOutcomingRes({
         statusCode,
         request: createRequest(),
       });
 
-      expect(didLog).toBe(true);
-      expect(logger.warn).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        `Outcoming Response: GET ${SIGN_IN_PATH} ${statusCode} ${reason}`,
+      );
       expect(logger.error).not.toHaveBeenCalled();
-      expect(loggedText(logger)).toContain(String(statusCode));
-      expect(loggedText(logger)).toContain(reason);
-      expect(loggedText(logger)).toContain(`GET ${SIGN_IN_PATH}`);
       expectNoPii(logger);
     },
   );
+
+  it('should include the exception message on a warn outcome', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logOutcomingRes({
+      statusCode: 401,
+      request: createRequest(),
+      exception: new UnauthorizedException('Invalid credentials'),
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      `Outcoming Response: GET ${SIGN_IN_PATH} 401 Unauthorized - Invalid credentials`,
+    );
+    expect(logger.error).not.toHaveBeenCalled();
+    expectNoPii(logger);
+  });
 
   it('should error for a 500 outcome without logging email, password, or body', () => {
     const logger = createLogger();
     const service = new ObservabilityService(logger);
     const exception = new Error('boom');
 
-    const didLog = service.log({
+    service.logOutcomingRes({
       statusCode: 500,
-      exception,
       request: createRequest(),
+      exception,
     });
 
-    expect(didLog).toBe(true);
-    expect(logger.error).toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      `Outcoming Response: GET ${SIGN_IN_PATH} 500 ${STATUS_CODES[500] ?? 'Internal Server Error'} - boom`,
+      exception.stack,
+    );
     expect(logger.warn).not.toHaveBeenCalled();
-    expect(loggedText(logger)).toContain('500');
-    expect(loggedText(logger)).toContain(STATUS_CODES[500] ?? 'Internal Server Error');
-    expect(loggedText(logger)).toContain(exception.stack ?? exception.message);
     expectNoPii(logger);
   });
 
-  it('should not write an access Log for a 200 outcome', () => {
+  it('should write an info Log for a 200 outcome without logging email, password, or body', () => {
     const logger = createLogger();
     const service = new ObservabilityService(logger);
 
-    const didLog = service.log({
+    service.logOutcomingRes({
       statusCode: 200,
       request: createRequest(),
     });
 
-    expect(didLog).toBe(false);
+    expect(logger.log).toHaveBeenCalledWith(
+      `Outcoming Response: GET ${SIGN_IN_PATH} 200 OK`,
+    );
     expect(logger.warn).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
-    expect(logger.log).not.toHaveBeenCalled();
+    expectNoPii(logger);
   });
 
-  it('should remember whether an outcome was already logged', () => {
-    const service = new ObservabilityService(createLogger());
-    const response = { statusCode: 401 };
+  it('should still log a route when the request path is missing', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
 
-    expect(service.hasLogged(response)).toBe(false);
-    service.remember(response);
-    expect(service.hasLogged(response)).toBe(true);
+    service.logOutcomingRes({
+      statusCode: 200,
+      request: { method: 'GET' },
+    });
+
+    expect(logger.log).toHaveBeenCalledWith(
+      `Outcoming Response: GET ${UNKNOWN_ROUTE} 200 OK`,
+    );
+  });
+
+  it('should log an incoming request without query, email, password, or body', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logIncomingReq(createRequest());
+
+    expect(logger.log).toHaveBeenCalledWith(
+      `Incoming Request: GET ${SIGN_IN_PATH}`,
+    );
+    expectNoPii(logger);
+  });
+
+  it('should not log Health as an incoming request', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logIncomingReq({ method: 'GET', originalUrl: '/api/health' });
+
+    expect(logger.log).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('should be constructable by Nest without a logger provider', async () => {
@@ -93,6 +141,7 @@ describe('ObservabilityService', () => {
 });
 
 function createLogger(): LoggerService & {
+  log: jest.Mock;
   warn: jest.Mock;
   error: jest.Mock;
 } {
@@ -114,9 +163,17 @@ function createRequest(): HttpOutcomeRequest & {
 }
 
 function loggedText(
-  logger: LoggerService & { warn: jest.Mock; error: jest.Mock },
+  logger: LoggerService & {
+    log: jest.Mock;
+    warn: jest.Mock;
+    error: jest.Mock;
+  },
 ): string {
-  return [...logger.warn.mock.calls, ...logger.error.mock.calls]
+  return [
+    ...logger.log.mock.calls,
+    ...logger.warn.mock.calls,
+    ...logger.error.mock.calls,
+  ]
     .flat()
     .filter((argument) => argument != null)
     .map((argument) =>
@@ -126,7 +183,11 @@ function loggedText(
 }
 
 function expectNoPii(
-  logger: LoggerService & { warn: jest.Mock; error: jest.Mock },
+  logger: LoggerService & {
+    log: jest.Mock;
+    warn: jest.Mock;
+    error: jest.Mock;
+  },
 ): void {
   const text = loggedText(logger);
   expect(text).not.toContain(EMAIL);

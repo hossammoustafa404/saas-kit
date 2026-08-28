@@ -18,17 +18,24 @@ src/
 │   ├── observability/
 │   │   ├── observability.module.ts
 │   │   ├── observability.constants.ts    # NEVER constants.ts
-│   │   ├── otel.ts                       # NodeSDK start before Nest
-│   │   ├── json-logger.ts                # JSON LoggerService when tracing is on
+│   │   ├── lib/
+│   │   │   ├── otel.ts                   # NodeSDK start before Nest
+│   │   │   └── app-logger.ts             # LoggerService (JSON stdout + OTLP)
 │   │   ├── services/                     # One folder per service
 │   │   │   ├── index.ts
 │   │   │   ├── observability/
 │   │   │   │   └── observability.service.ts
 │   │   │   └── posthog/
 │   │   │       └── posthog.service.ts    # capture() — never throws
-│   │   ├── filters/                      # HTTP outcome filter — Nest throws
+│   │   ├── middlewares/                  # Incoming HTTP request logs
 │   │   │   ├── index.ts
-│   │   │   └── http-outcome.filter.ts
+│   │   │   └── http-observability.middleware.ts
+│   │   ├── interceptors/                 # Success HTTP response logs
+│   │   │   ├── index.ts
+│   │   │   └── http-observability.interceptor.ts
+│   │   ├── filters/                      # Thrown 4xx/5xx HTTP logs
+│   │   │   ├── index.ts
+│   │   │   └── http-observability.filter.ts
 │   │   ├── enums/
 │   │   │   ├── index.ts
 │   │   │   └── log-level.enum.ts
@@ -95,9 +102,9 @@ src/
 - Register feature modules in `app.module.ts` — do not nest feature modules inside each other unless there is a genuine parent/child domain relationship.
 - Infrastructure used by multiple modules (`prisma`, `config`, `observability`, `queue`, `mail`) lives in `shared/` — not inside feature modules.
 - Shared infra is named after the folder: `ObservabilityModule` + `observability.constants.ts`. When a shared area owns more than one service, each lives in `services/{name}/` (`ObservabilityService`, `PosthogService`). A single-service area stays next to the module (`PrismaService`). Do not invent a verb-resource service (`LogHttpOutcomeService`) for shared infra.
-- Filters and interceptors live **inside the module that owns the concern** (`shared/observability/filters/`, or `modules/{name}/filters/` when the concern is a feature). Register globals with `APP_FILTER` / `APP_INTERCEPTOR` in that module's `providers`.
-- HTTP 4xx/5xx from Nest **throw**. The observability **filter** logs them. better-auth (no Nest throw) is logged on Express `finish`. **NEVER** a global interceptor that treats a Nest handler return as 4xx/5xx — that return must not happen. See `controllers.md`.
-- **NEVER** `shared/filters/` or `shared/interceptors/` as a dumping ground. **NEVER** `new` a module-owned filter or interceptor in `main.ts`.
+- Middleware, filters, and interceptors live **inside the module that owns the concern** (`shared/observability/middlewares/`, `shared/observability/interceptors/`, `shared/observability/filters/`, or `modules/{name}/filters/` when the concern is a feature). Register globals with `APP_FILTER` / `APP_INTERCEPTOR` in that module's `providers`. Register global middleware via `NestModule.configure` in that module — never `app.use()` in `main.ts`.
+- HTTP logs: `logIncomingReq` writes incoming `Incoming Request: METHOD /path`. `logOutcomingRes` writes `Outcoming Response: METHOD /path 200 OK` (or 4xx/5xx at the same prefix). Warn includes the exception message; error includes the message and a `stack` field. Incoming middleware is registered with `NestModule.configure` and excludes `/api/auth`. Better-auth incoming and outgoing logs come from `httpObservabilityPlugin` `hooks.before` / `hooks.after` in `modules/auth/plugins/` — those routes never enter the Nest middleware, interceptor, or filter. The filter logs the already-written status when headers are sent, then marks 5xx spans Error. **NEVER** return 4xx/5xx from a Nest handler by setting status and returning a body. **NEVER** an Express `finish` listener. See `controllers.md`.
+- **NEVER** `shared/filters/`, `shared/interceptors/`, or `shared/middlewares/` as a dumping ground. **NEVER** `new` a module-owned filter, interceptor, or middleware in `main.ts`.
 - Constants: `{module}.constants.ts` at the module root. **NEVER** `constants.ts`.
 - Internal interfaces: `interfaces/{name}.interface.ts` — **one exported interface per file**. Re-export from `interfaces/index.ts`. **NEVER** `types.ts`. **NEVER** put several interfaces in one file. HTTP contracts stay in `@saas-kit/schemas`, not here.
 - **NEVER** apply frontend feature root files (`constants.ts`, `types.ts`) to `apps/server`.
@@ -118,17 +125,17 @@ src/
 
 ```ts
 // modules/user/user.controller.ts
-import { FindOneUserService, CreateUserService } from "./services";
+import { FindOneUserService, CreateUserService } from './services';
 
-@Controller("users")
+@Controller('users')
 export class UserController {
   constructor(
     private readonly findOneUser: FindOneUserService,
     private readonly createUser: CreateUserService,
   ) {}
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
+  @Get(':id')
+  findOne(@Param('id') id: string) {
     return this.findOneUser.execute(id);
   }
 
@@ -144,13 +151,13 @@ export class UserController {
 - Colocate the controller spec beside the controller: `user.controller.spec.ts` next to `user.controller.ts`.
 - Test routing, delegation to action services, and HTTP status codes — not business logic (that belongs in action service specs).
 
-## Module-Scoped Guards, Filters & Interceptors
+## Module-Scoped Guards, Filters, Interceptors & Middleware
 
 - Guards and decorators used **only within a module** live in that module's `guards/` and `decorators/` folders.
-- Filters and interceptors used by a module (including app-wide ones it owns) live in that module's `filters/` and `interceptors/` folders — `shared/observability/filters/http-outcome.filter.ts`, not `shared/filters/`.
-- Observability HTTP outcome logging does **not** use an interceptor. Nest failures throw (`APP_FILTER`). better-auth 4xx is Express `finish` in `ObservabilityModule`.
-- **NEVER** put an observability (or any other owned) filter/interceptor in a top-level `shared/filters/` or `shared/interceptors/` folder.
-- Register module-owned global filters and interceptors via `APP_FILTER` / `APP_INTERCEPTOR` in the module `providers` array.
+- Middleware, filters, and interceptors used by a module (including app-wide ones it owns) live in that module's `middlewares/`, `filters/`, and `interceptors/` folders — `shared/observability/middlewares/http-observability.middleware.ts`, not `shared/middlewares/`.
+- Observability HTTP logging: middleware for Nest incoming (`Incoming Request: METHOD /path`); interceptor for Nest success and `APP_FILTER` for thrown warn/error (`Outcoming Response: METHOD /path 200 OK` / `Outcoming Response: METHOD /path 401 Unauthorized`); `httpObservabilityPlugin` `hooks.before` / `hooks.after` for better-auth (those routes never enter the Nest router). Incoming middleware is registered with `NestModule.configure` and excludes `/api/auth`. If Nest throws after the response was already written, the filter logs that status, not the Nest 404. Middleware runs before guards, so AuthGuard rejections still get an incoming log. No Express `finish` listener.
+- **NEVER** put an observability (or any other owned) middleware/filter/interceptor in a top-level `shared/middlewares/`, `shared/filters/`, or `shared/interceptors/` folder.
+- Register module-owned global filters and interceptors via `APP_FILTER` / `APP_INTERCEPTOR` in the module `providers` array. Register module-owned global middleware via `NestModule.configure`.
 - Auth guards and session decorators come from `@thallesp/nestjs-better-auth` — do not reimplement. See `authentication.md`.
 - Register module-scoped guards in the module's `providers` and apply via `@UseGuards()` or module-level setup.
 
@@ -180,17 +187,17 @@ Every feature exposes a controlled surface through `modules/{name}/index.ts`. Ev
 
 ## Layer Responsibilities
 
-| Layer           | Responsibility                                      |
-| --------------- | --------------------------------------------------- |
-| Controller      | HTTP routing, status codes, request/response shape  |
-| Action service  | Single use case — business logic, CASL, Prisma      |
-| Prisma          | Data access only — no business rules in queries      |
-| DTO / Schema    | Input validation and output serialization           |
-| Interface       | Internal object-shape contracts — not HTTP          |
-| Enum            | Closed named value sets (`UserRole`, `OriginKind`)  |
-| Guard/Decorator | Module-scoped or library-provided access control    |
+| Layer           | Responsibility                                     |
+| --------------- | -------------------------------------------------- |
+| Controller      | HTTP routing, status codes, request/response shape |
+| Action service  | Single use case — business logic, CASL, Prisma     |
+| Prisma          | Data access only — no business rules in queries    |
+| DTO / Schema    | Input validation and output serialization          |
+| Interface       | Internal object-shape contracts — not HTTP         |
+| Enum            | Closed named value sets (`UserRole`, `OriginKind`) |
+| Guard/Decorator | Module-scoped or library-provided access control   |
 
 ```ts
 // modules/user/index.ts — public subset
-export { UserModule } from "./user.module";
+export { UserModule } from './user.module';
 ```

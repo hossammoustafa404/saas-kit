@@ -1,3 +1,8 @@
+import {
+  POSTHOG_OTLP_LOGS_PATH,
+  POSTHOG_OTLP_TRACES_PATH,
+} from '../observability.constants';
+
 const sdk = {
   start: jest.fn(),
   shutdown: jest.fn(),
@@ -35,29 +40,31 @@ jest.mock('dotenv', () => ({
   config: jest.fn(),
 }));
 
+const PROJECT_TOKEN = 'phc_test_project_token';
+const POSTHOG_HOST = 'https://us.i.posthog.com';
+
 describe('otel', () => {
   const originalApiKey = process.env.POSTHOG_API_KEY;
+  const originalHost = process.env.POSTHOG_HOST;
 
   beforeEach(() => {
     jest.resetModules();
     sdk.start.mockReset();
     sdk.shutdown.mockReset();
     sdk.shutdown.mockResolvedValue(undefined);
-    process.env.POSTHOG_API_KEY = 'phc_test_project_token';
+    delete process.env.POSTHOG_API_KEY;
+    delete process.env.POSTHOG_HOST;
     jest.spyOn(process, 'once').mockReturnValue(process);
   });
 
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
-    if (originalApiKey === undefined) {
-      delete process.env.POSTHOG_API_KEY;
-    } else {
-      process.env.POSTHOG_API_KEY = originalApiKey;
-    }
+    restoreEnv('POSTHOG_API_KEY', originalApiKey);
+    restoreEnv('POSTHOG_HOST', originalHost);
   });
 
-  it('should register an awaiting SIGTERM handler after the SDK starts', async () => {
+  it('should start the SDK and register an awaiting SIGTERM handler', async () => {
     const { NodeSDK } = await import('@opentelemetry/sdk-node');
     const { handleOtelSigterm, startOtel } = await import('./otel');
 
@@ -68,14 +75,52 @@ describe('otel', () => {
     expect(process.once).toHaveBeenCalledWith('SIGTERM', handleOtelSigterm);
   });
 
-  it('should not register a SIGTERM handler when observability is disabled', async () => {
-    delete process.env.POSTHOG_API_KEY;
+  it('should not export OTLP when PostHog is not configured', async () => {
+    const { OTLPTraceExporter } = await import(
+      '@opentelemetry/exporter-trace-otlp-proto'
+    );
+    const { OTLPLogExporter } = await import(
+      '@opentelemetry/exporter-logs-otlp-proto'
+    );
+    const { NodeSDK } = await import('@opentelemetry/sdk-node');
+    const { NoopSpanProcessor } = await import('@opentelemetry/sdk-trace');
     const { startOtel } = await import('./otel');
 
     await startOtel();
 
-    expect(sdk.start).not.toHaveBeenCalled();
-    expect(process.once).not.toHaveBeenCalled();
+    expect(OTLPTraceExporter).not.toHaveBeenCalled();
+    expect(OTLPLogExporter).not.toHaveBeenCalled();
+    expect(NodeSDK).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spanProcessors: [expect.any(NoopSpanProcessor)],
+        logRecordProcessors: [],
+        metricReaders: [],
+      }),
+    );
+  });
+
+  it('should export traces and logs to PostHog when a project token and host are set', async () => {
+    process.env.POSTHOG_API_KEY = PROJECT_TOKEN;
+    process.env.POSTHOG_HOST = POSTHOG_HOST;
+    const { OTLPTraceExporter } = await import(
+      '@opentelemetry/exporter-trace-otlp-proto'
+    );
+    const { OTLPLogExporter } = await import(
+      '@opentelemetry/exporter-logs-otlp-proto'
+    );
+    const { startOtel } = await import('./otel');
+
+    await startOtel();
+
+    const headers = { Authorization: `Bearer ${PROJECT_TOKEN}` };
+    expect(OTLPTraceExporter).toHaveBeenCalledWith({
+      url: `${POSTHOG_HOST}${POSTHOG_OTLP_TRACES_PATH}`,
+      headers,
+    });
+    expect(OTLPLogExporter).toHaveBeenCalledWith({
+      url: `${POSTHOG_HOST}${POSTHOG_OTLP_LOGS_PATH}`,
+      headers,
+    });
   });
 
   it('should keep the event loop alive until OpenTelemetry shutdown finishes after SIGTERM', async () => {
@@ -115,3 +160,12 @@ describe('otel', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 });
+
+function restoreEnv(name: string, previous: string | undefined): void {
+  if (previous === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = previous;
+}

@@ -1,1 +1,1 @@
-export { HttpSpanStatusInterceptor } from './http-span-status.interceptor';
+export { HttpObservabilityInterceptor } from './http-observability.interceptor';
