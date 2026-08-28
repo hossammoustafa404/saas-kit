@@ -3,7 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AUTH_DOCS_ROUTE } from './modules/auth/auth.constants';
 import type { Env } from './shared/config/env.schema';
-import { startOtel } from './shared/observability/otel';
+import { JsonLogger } from './shared/observability/json-logger';
+import { isOtelStarted, startOtel } from './shared/observability/otel';
 import { BULL_BOARD_ROUTE } from './shared/queue/queue.constants';
 import { setupSwagger } from './shared/swagger/setup-swagger';
 
@@ -13,7 +14,10 @@ async function bootstrap() {
   const { NestFactory } = await import('@nestjs/core');
   const { AppModule } = await import('./app.module.js');
 
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    ...(isOtelStarted() ? { logger: new JsonLogger() } : {}),
+  });
   app.enableShutdownHooks();
   const config = app.get(ConfigService<Env, true>);
   const globalPrefix = 'api';

@@ -18,6 +18,8 @@ src/
 │   ├── observability/
 │   │   ├── observability.module.ts
 │   │   ├── observability.constants.ts    # NEVER constants.ts
+│   │   ├── otel.ts                       # NodeSDK start before Nest
+│   │   ├── json-logger.ts                # JSON LoggerService when tracing is on
 │   │   ├── services/                     # One folder per service
 │   │   │   ├── index.ts
 │   │   │   ├── observability/
@@ -27,6 +29,9 @@ src/
 │   │   ├── filters/                      # HTTP outcome filter — Nest throws
 │   │   │   ├── index.ts
 │   │   │   └── http-outcome.filter.ts
+│   │   ├── enums/
+│   │   │   ├── index.ts
+│   │   │   └── log-level.enum.ts
 │   │   └── interfaces/                   # NEVER types.ts — one file per interface
 │   │       ├── index.ts
 │   │       └── http-outcome-request.interface.ts

@@ -3,12 +3,20 @@ const sdk = {
   shutdown: jest.fn(),
 };
 
+jest.mock('@opentelemetry/sdk-logs', () => ({
+  BatchLogRecordProcessor: jest.fn(),
+}));
+
 jest.mock('@opentelemetry/sdk-node', () => ({
   NodeSDK: jest.fn().mockImplementation(() => sdk),
 }));
 
 jest.mock('@opentelemetry/auto-instrumentations-node', () => ({
   getNodeAutoInstrumentations: jest.fn(() => []),
+}));
+
+jest.mock('@opentelemetry/exporter-logs-otlp-proto', () => ({
+  OTLPLogExporter: jest.fn(),
 }));
 
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({

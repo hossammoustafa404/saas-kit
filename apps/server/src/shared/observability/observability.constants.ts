@@ -8,3 +8,5 @@ export const HEALTH_TRACE_PATH = '/api/health';
 export const HEALTH_TRACE_METHOD = 'GET';
 export const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com';
 export const OTEL_SHUTDOWN_KEEP_ALIVE_MS = 1_000;
+export const LOG_TRACE_ID = 'trace_id';
+export const LOG_SPAN_ID = 'span_id';
