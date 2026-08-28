@@ -29,3 +29,13 @@ jobs:
           github_action_config.auto_describe: 'true'
           github_action_config.auto_improve: 'false'
           github_action_config.pr_actions: '["opened", "synchronize"]'
+          pr_description.enable_pr_type: 'true'
+          pr_description.extra_instructions: >
+            Choose exactly one PR type. Never select both Enhancement and
+            Documentation. Enhancement is for new or changed product behavior
+            (there is no Feature type). Bug fix is for repairing incorrect
+            behavior only. Tests is when the PR is primarily tests.
+            Documentation is only when docs, markdown, or rule files are the
+            main change — accompanying docs updates on a code PR do not make
+            it Documentation. Other is chore, refactor, or config with no
+            behavior change. Do not default to Enhancement.

@@ -65,11 +65,11 @@ export async function signUpCustomer(
   );
 }
 
-export async function readVerificationToken(email: string): Promise<string> {
+export async function readQueuedMailText(email: string): Promise<string> {
   const queue = getMailQueue();
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
-    const token = tokenFromQueuedMail(
+    const text = textFromQueuedMail(
       email,
       await queue.getJobs([
         'waiting',
@@ -79,12 +79,30 @@ export async function readVerificationToken(email: string): Promise<string> {
         'failed',
       ]),
     );
-    if (token !== undefined) {
-      return token;
+    if (text !== undefined) {
+      return text;
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`No verification mail job for ${email}`);
+  throw new Error(`No mail job for ${email}`);
+}
+
+export async function readVerificationToken(email: string): Promise<string> {
+  const text = await readQueuedMailText(email);
+  const urlMatch = /https?:\/\/\S+/.exec(text);
+  if (urlMatch === null) {
+    throw new Error(`No verification URL in mail for ${email}`);
+  }
+
+  try {
+    const token = new URL(urlMatch[0]).searchParams.get('token');
+    if (token !== null && token !== '') {
+      return token;
+    }
+  } catch {
+    // invalid URL in the mail body
+  }
+  throw new Error(`No verification token in mail for ${email}`);
 }
 
 let mailQueue: Queue | undefined;
@@ -96,9 +114,7 @@ function getMailQueue(): Queue {
 
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl === undefined) {
-    throw new Error(
-      'REDIS_URL is required to read the queued verification email',
-    );
+    throw new Error('REDIS_URL is required to read the queued mail');
   }
 
   mailQueue = new Queue('mail', { connection: { url: redisUrl } });
@@ -115,25 +131,16 @@ export async function closeMailQueue(): Promise<void> {
   await queue.close();
 }
 
-function tokenFromQueuedMail(email: string, jobs: Job[]): string | undefined {
+function textFromQueuedMail(email: string, jobs: Job[]): string | undefined {
   const job = jobs
     .filter((item) => item.data?.to === email)
     .sort((left, right) => (right.timestamp ?? 0) - (left.timestamp ?? 0))[0];
   const text = job?.data?.text;
-  if (text === undefined) {
+  if (typeof text !== 'string' || text === '') {
     return undefined;
   }
 
-  const urlMatch = /https?:\/\/\S+/.exec(text);
-  if (urlMatch === null) {
-    return undefined;
-  }
-
-  try {
-    return new URL(urlMatch[0]).searchParams.get('token') ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return text;
 }
 
 export async function verifyCustomerEmail(email: string) {

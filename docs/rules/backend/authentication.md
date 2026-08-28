@@ -11,6 +11,7 @@ src/
         ├── auth.constants.ts
         ├── enums/
         │   ├── index.ts
+        │   ├── member-role.enum.ts
         │   ├── origin-kind.enum.ts
         │   └── user-role.enum.ts
         ├── interfaces/
@@ -20,8 +21,10 @@ src/
         │   └── auth-hook-user-context.interface.ts
         ├── auth.module.ts
         ├── lib/
-        │   └── auth.ts           # betterAuth({ ... }) instance
+        │   ├── auth.ts           # betterAuth({ ... }) instance
+        │   └── organization-hooks.ts  # reject Super Admin invitee and addMember target
         ├── plugins/
+        │   ├── add-member.plugin.ts  # HTTP addMember; Better Auth ships it server-only
         │   └── http-observability.plugin.ts  # incoming and outgoing HTTP logs for auth routes
         └── hooks/
             ├── origin-gate.hook.ts
@@ -109,7 +112,9 @@ Register auth lifecycle hooks as injectable providers with `@Hook()`, `@BeforeHo
 @Hook()
 @Injectable()
 export class SignUpHook {
-  constructor(private readonly sendWelcomeEmailService: SendWelcomeEmailService) {}
+  constructor(
+    private readonly sendWelcomeEmailService: SendWelcomeEmailService,
+  ) {}
 
   @BeforeHook('/sign-up/email')
   async handle(ctx: AuthHookContext) {
@@ -137,6 +142,8 @@ Bull Board is at `/api/queues`. It is Express middleware, so the global `AuthGua
 Enable Better Auth `organization()` on the server in `createAuth`. Customer Organization actions use the plugin HTTP API under `/api/auth/organization/*`. Do not duplicate those routes in NestJS. Do not add `organizationClient` on web or admin this pass.
 
 `allowUserToCreateOrganization` is true only for Role `customer`. Creator Membership position is owner. Creating an Organization sets Active Organization unless the Customer sends `keepCurrentActiveOrganization`. Sign-in leaves Active Organization unset — do not add a session-create hook that auto-picks one. Teams and dynamic Organization roles stay off. Prisma has Organization, Membership (`member`), Invitation, and `activeOrganizationId` on Session — no team, teamMember, or organizationRole tables. Plugin access control enforces owner/admin/member on plugin routes. Do not introduce CASL for Organization this pass.
+
+Owner and admin may create an Invitation (`POST /organization/invite-member`) and add a Member (`POST /organization/add-member`). Position member cannot. Better Auth ships `addMember` as a server-only API with no HTTP route; `addMemberPlugin` exposes that path under the existing Better Auth base path and checks Membership position before creating the seat. Reject a Super Admin email as invitee and a Super Admin `userId` as an addMember target so a Super Admin never gains a Membership. Invitation accept/reject/get require Email verification (serial Invitation ids stay; do not set `requireEmailVerificationOnInvitation: false`). `sendInvitationEmail` enqueues plain text with `{WEB_ORIGIN}/accept-invitation/{id}`. Last owner cannot leave or be removed. Owner may delete the Organization; admin may not.
 
 ## AuthService
 
