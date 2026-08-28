@@ -18,7 +18,7 @@ Approved technologies for the NestJS backend. **NEVER** introduce alternatives w
 | Config         | `@nestjs/config` (`shared/config/`)         | `nestjs.md`             |
 | Mail           | Resend                                      | `authentication.md`     |
 | Queue          | Redis + BullMQ (`shared/queue/`) + Bull Board | `authentication.md`     |
-| Logging        | NestJS built-in `Logger`                    | `nestjs.md`             |
+| Logging        | NestJS Logger; JSON `JsonLogger` + OTLP logs when tracing is on | `nestjs.md`             |
 | Tracing        | OpenTelemetry NodeSDK → PostHog OTLP (opt-in) | `nestjs.md`           |
 | Events         | `posthog-node` `capture()` (opt-in)         | `authentication.md`     |
 | Testing        | Jest + Supertest                            | `testing.md`            |
@@ -28,3 +28,5 @@ Mail is plain text via Resend. BullMQ’s Redis connection is registered once in
 Product Events use `posthog-node` `capture()` when a PostHog project token is set. **NEVER** send Events over OTLP, **NEVER** use `PostHogInterceptor` or `captureException` in v1, and **NEVER** let a capture failure fail auth or Health.
 
 Traces use the OpenTelemetry NodeSDK (`@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-trace-otlp-proto`, `@prisma/instrumentation`) when a PostHog project token is set. Start the SDK before Nest loads so HTTP and Prisma auto-instrumentation can patch. Export to PostHog’s `/i/v1/traces` with `Authorization: Bearer` plus the `phc_` token. **NEVER** set `OTEL_EXPORTER_OTLP_ENDPOINT`. **NEVER** let an OpenTelemetry failure fail auth or Health.
+
+When tracing is on, Nest uses `JsonLogger` (JSON stdout with `trace_id` / `span_id` when a span is active) and the same NodeSDK exports Logs to PostHog’s `/i/v1/logs` over OTLP (`@opentelemetry/exporter-logs-otlp-proto`) with the same Bearer project token. When the token is missing, keep Nest’s default Logger. **NEVER** `capture()` a Log. **NEVER** write an access Log on 2xx.

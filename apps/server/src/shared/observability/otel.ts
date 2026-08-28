@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import { Logger } from '@nestjs/common';
 import type { Span } from '@opentelemetry/api';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { PrismaInstrumentation } from '@prisma/instrumentation';
@@ -56,6 +58,16 @@ export async function startOtel(): Promise<void> {
           Authorization: `Bearer ${token}`,
         },
       }),
+      logRecordProcessors: [
+        new BatchLogRecordProcessor({
+          exporter: new OTLPLogExporter({
+            url: otlp.logs,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        }),
+      ],
       instrumentations: [
         getNodeAutoInstrumentations({
           '@opentelemetry/instrumentation-http': {
@@ -80,6 +92,10 @@ export async function startOtel(): Promise<void> {
   }
 
   process.once('SIGTERM', handleOtelSigterm);
+}
+
+export function isOtelStarted(): boolean {
+  return sdk !== undefined;
 }
 
 export async function shutdownOtel(): Promise<void> {
