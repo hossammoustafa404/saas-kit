@@ -28,6 +28,22 @@ _Avoid_: Admin, owner, operator, staff
 Proof that a User is signed in. The API treats a request as that User while the Session is valid.
 _Avoid_: Token, JWT, login
 
+**Organization**:
+A named workspace with a slug. A Customer creates one and becomes its owner, or is added or invited later. Sign-up creates none. A Customer may belong to zero or many at once.
+_Avoid_: Tenant, team, company, account
+
+**Membership**:
+The seat a Customer has in an Organization. Position is owner, admin, or member. Stored in the plugin `member` table. A Super Admin never has a Membership.
+_Avoid_: Role, member (for the Customer), permission
+
+**Invitation**:
+A pending ask for an email to join an Organization with a Membership position. Accept, reject, and get require Email verification.
+_Avoid_: Invite link, token, share
+
+**Active Organization**:
+The Organization currently selected on a Session. Sign-in leaves it unset. Creating an Organization sets it unless the Customer keeps the current one.
+_Avoid_: Current tenant, default organization
+
 **Email verification**:
 Proof that a User owns the email they signed up with. A Customer does not get a Session until Email verification succeeds. Testers finish verification by reading the queued mail job and calling Better Auth’s verify URL — they do not parse mailboxes.
 _Avoid_: Confirm email, activation, magic link

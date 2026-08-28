@@ -1,12 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { betterAuth } from 'better-auth';
-import { admin, openAPI } from 'better-auth/plugins';
+import { admin, openAPI, organization } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
 import { EnvSchema } from '../../../shared/config/env.schema';
 import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
 import { AUTH_BASE_PATH, VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
-import { UserRole } from '../enums';
+import { MemberRole, UserRole } from '../enums';
 import type { CreateAuthOptions } from '../interfaces';
 import { httpObservabilityPlugin } from '../plugins/http-observability.plugin';
 
@@ -61,6 +61,17 @@ export function createAuth({
         roles: {
           [UserRole.SuperAdmin]: adminAc,
           [UserRole.Customer]: userAc,
+        },
+      }),
+      organization({
+        allowUserToCreateOrganization: (user) =>
+          user.role === UserRole.Customer,
+        creatorRole: MemberRole.Owner,
+        teams: {
+          enabled: false,
+        },
+        dynamicAccessControl: {
+          enabled: false,
         },
       }),
       openAPI(),

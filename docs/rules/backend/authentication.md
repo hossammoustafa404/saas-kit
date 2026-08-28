@@ -132,6 +132,12 @@ Env: `REDIS_URL`, `RESEND_API_KEY`, `MAIL_FROM`. E2E and `nx serve` require Redi
 
 Bull Board is at `/api/queues`. It is Express middleware, so the global `AuthGuard` does not apply. `BullBoardAuthMiddleware` in `shared/queue/` requires a Super Admin Session. Job payloads (including mail) are visible to Super Admins only. **NEVER** leave the board anonymous or Customer-accessible.
 
+## Organization plugin
+
+Enable Better Auth `organization()` on the server in `createAuth`. Customer Organization actions use the plugin HTTP API under `/api/auth/organization/*`. Do not duplicate those routes in NestJS. Do not add `organizationClient` on web or admin this pass.
+
+`allowUserToCreateOrganization` is true only for Role `customer`. Creator Membership position is owner. Creating an Organization sets Active Organization unless the Customer sends `keepCurrentActiveOrganization`. Sign-in leaves Active Organization unset — do not add a session-create hook that auto-picks one. Teams and dynamic Organization roles stay off. Prisma has Organization, Membership (`member`), Invitation, and `activeOrganizationId` on Session — no team, teamMember, or organizationRole tables. Plugin access control enforces owner/admin/member on plugin routes. Do not introduce CASL for Organization this pass.
+
 ## AuthService
 
 Inject `AuthService<Auth>` (`Auth` is `ReturnType<typeof createAuth>`) for programmatic access to better-auth API endpoints (e.g. `listUserAccounts`, `generateOpenAPISchema`, plugin methods). Passing the auth instance type is how plugin fields such as `user.role` (admin plugin) appear on `getSession()` and `@Session()`.
@@ -150,4 +156,8 @@ Inject `AuthService<Auth>` (`Auth` is `ReturnType<typeof createAuth>`) for progr
 - **NEVER** implement sign-in/sign-up/sign-out in feature controllers — better-auth handles auth routes.
 - Keep `/api/auth` and `/api/auth/*path` in `setGlobalPrefix` exclude (with Bull Board). `setGlobalPrefix` replaces the exclude list AuthModule set in its constructor.
 - **NEVER** send mail inline on the auth request path.
+- **NEVER** duplicate Better Auth organization plugin routes in NestJS.
+- **NEVER** add `organizationClient` on web or admin this pass.
+- **NEVER** enable Teams or dynamic Organization roles.
+- **NEVER** use CASL for Organization actions this pass.
 - Session and user types come from the shared schemas package or better-auth — do not duplicate them.

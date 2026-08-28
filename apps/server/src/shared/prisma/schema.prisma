@@ -9,38 +9,43 @@ datasource db {
 }
 
 model User {
-  id            BigInt    @id @default(autoincrement())
+  id            BigInt       @id @default(autoincrement())
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          String?
-  banned        Boolean?  @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  role          String       @default("customer")
+  banned        Boolean?     @default(false)
   banReason     String?
   banExpires    DateTime?
   sessions      Session[]
   accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
 
   @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id             BigInt   @id @default(autoincrement())
-  expiresAt      DateTime
-  token          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  ipAddress      String?
-  userAgent      String?
-  userId         BigInt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  impersonatedBy BigInt?
+  id                   BigInt        @id @default(autoincrement())
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               BigInt
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy       BigInt?
+  activeOrganizationId BigInt?
+  activeOrganization   Organization? @relation(fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 
   @@unique([token])
   @@index([userId])
+  @@index([activeOrganizationId])
   @@map("session")
 }
 
@@ -75,4 +80,51 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Organization {
+  id          BigInt       @id @default(autoincrement())
+  name        String
+  slug        String
+  logo        String?
+  metadata    String?
+  createdAt   DateTime     @default(now())
+  members     Member[]
+  invitations Invitation[]
+  sessions    Session[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             BigInt       @id @default(autoincrement())
+  organizationId BigInt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         BigInt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             BigInt       @id @default(autoincrement())
+  organizationId BigInt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      BigInt
+  inviter        User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
 }
