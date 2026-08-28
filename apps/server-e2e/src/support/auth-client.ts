@@ -1,5 +1,8 @@
 import axios from 'axios';
 import { type Job, Queue } from 'bullmq';
+import type { AuthSession } from './interfaces';
+
+export type { AuthSession } from './interfaces';
 
 export const WEB_ORIGIN = 'http://localhost:3000';
 export const ADMIN_ORIGIN = 'http://localhost:3001';
@@ -12,6 +15,10 @@ export const SEED_ADMIN_PASSWORD =
 
 export function uniqueCustomerEmail(): string {
   return `customer-${Date.now()}-${Math.round(Math.random() * 1_000_000)}@example.com`;
+}
+
+export function uniqueOrganizationSlug(): string {
+  return `workspace-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`;
 }
 
 export function cookieHeader(setCookie: string[] | string | undefined): string {
@@ -154,6 +161,45 @@ export async function signIn(options: {
       validateStatus: () => true,
     },
   );
+}
+
+export async function createVerifiedCustomerSession(
+  options: {
+    origin?: string;
+    email?: string;
+    password?: string;
+  } = {},
+) {
+  const email = options.email ?? uniqueCustomerEmail();
+  const password = options.password ?? 'customer-password-1';
+  const origin = options.origin ?? WEB_ORIGIN;
+  await signUpCustomer({ origin, email, password });
+  await verifyCustomerEmail(email);
+  const signInRes = await signIn({ email, password, origin });
+  return {
+    email,
+    password,
+    origin,
+    cookie: cookieHeader(signInRes.headers['set-cookie']),
+  };
+}
+
+export function authRequest(session: AuthSession) {
+  return {
+    headers: {
+      Cookie: session.cookie,
+      Origin: session.origin,
+    },
+    validateStatus: () => true,
+  };
+}
+
+export function getSession(session: AuthSession) {
+  return axios.get('/api/auth/get-session', authRequest(session));
+}
+
+export function signOut(session: AuthSession) {
+  return axios.post('/api/auth/sign-out', {}, authRequest(session));
 }
 
 function originHeaders(origin: string | undefined): Record<string, string> {
