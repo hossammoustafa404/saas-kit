@@ -11,7 +11,7 @@
 
 - Use **semantic design tokens** from the theme (`background`, `foreground`, `primary`, `muted`, `border`, `ring`, etc.). Never hardcode raw color values or palette-specific classes.
 - Define and extend theme variables in `globals.css` only. Components consume tokens; they do not introduce new color definitions.
-- Support light and dark mode via the `class` strategy. Wrap the app in `ThemeProvider` from `next-themes` at the root layout.
+- Support light and dark mode via the `class` strategy. Wrap the app in `ThemeProvider` from `providers/theme-provider.tsx` at the root layout (import via `@/providers`).
 - Prefer token-based utilities: `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`.
 - Keep theme changes global. Do not scatter per-component color overrides that bypass the token system.
 

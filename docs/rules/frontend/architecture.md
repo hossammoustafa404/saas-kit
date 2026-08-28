@@ -38,6 +38,9 @@ features/
 │   ├── types.ts          # Unions, aliases, schema re-exports — not object shapes
 │   └── utils.ts
 components/ui/        # shadcn/ui components (auto-generated)
+providers/
+├── index.ts          # Barrel — sole entry for app-wide provider imports
+└── theme-provider.tsx
 lib/
 ├── index.ts          # Barrel — re-exports public lib utilities
 ├── auth-client.ts    # better-auth client → NestJS backend
@@ -59,6 +62,9 @@ lib/
 - `app/page.tsx` and `app/**/page.tsx` must be thin shells: compose and render views from `features/{name}` only.
 - A single page may import views from multiple features when the route needs cross-domain UI.
 - `app/layout.tsx` files may only compose shared layouts, providers, and metadata.
+- **ALWAYS** put app-wide React context providers in `providers/` (e.g. `theme-provider.tsx`, `query-provider.tsx`). One file per provider; export from `providers/index.ts`.
+- **NEVER** place providers in `components/` or `components/ui/`.
+- Import providers in `app/layout.tsx` from `@/providers` only — not from individual provider files.
 
 ## Public API (Strict)
 
