@@ -4,17 +4,17 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Universal (TypeScript)
 
-| Kind | Case | Example |
-|---|---|---|
-| Variables, functions, methods | `camelCase` | `getUser`, `isActive` |
-| Types, interfaces, classes, enums | `PascalCase` | `User`, `CreateUserInput` |
-| Constants (module-level immutable) | `SCREAMING_SNAKE_CASE` | `MAX_RETRY_COUNT` |
-| Enum members | `PascalCase` | `OrderStatus.Pending` |
-| Private class fields | `camelCase` with `#` or `private` | `#cache`, `private logger` |
-| Boolean variables | prefix `is`, `has`, `can`, `should` | `isLoading`, `hasAccess` |
-| Event handlers (internal) | prefix `handle` | `handleSubmit`, `handleClick` |
-| Callback props | prefix `on` | `onSubmit`, `onChange` |
-| Async functions | verb-first, no `async` prefix in name | `fetchUser`, not `asyncFetchUser` |
+| Kind                               | Case                                  | Example                           |
+| ---------------------------------- | ------------------------------------- | --------------------------------- |
+| Variables, functions, methods      | `camelCase`                           | `getUser`, `isActive`             |
+| Types, interfaces, classes, enums  | `PascalCase`                          | `User`, `CreateUserInput`         |
+| Constants (module-level immutable) | `SCREAMING_SNAKE_CASE`                | `MAX_RETRY_COUNT`                 |
+| Enum members                       | `PascalCase`                          | `OrderStatus.Pending`             |
+| Private class fields               | `camelCase` with `#` or `private`     | `#cache`, `private logger`        |
+| Boolean variables                  | prefix `is`, `has`, `can`, `should`   | `isLoading`, `hasAccess`          |
+| Event handlers (internal)          | prefix `handle`                       | `handleSubmit`, `handleClick`     |
+| Callback props                     | prefix `on`                           | `onSubmit`, `onChange`            |
+| Async functions                    | verb-first, no `async` prefix in name | `fetchUser`, not `asyncFetchUser` |
 
 - **ALWAYS** use `interface` for object shapes. Put module/feature-level ones in `interfaces/{name}.interface.ts` (`modules/{name}/interfaces/`, `features/{name}/interfaces/`). Shared infra uses `shared/{area}/interfaces/{name}.interface.ts`.
 - **ALWAYS** put enums in `enums/{name}.enum.ts` (`modules/{name}/enums/`, `features/{name}/enums/`). Shared infra uses `shared/{area}/enums/{name}.enum.ts`. Import from the folder barrel (`enums/index.ts`) inside the module or feature. **NEVER** declare an `enum` in a service, controller, hook, component, view, or other implementation file.
@@ -31,25 +31,25 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Files & Directories
 
-| Kind | Case | Example |
-|---|---|---|
-| Directories / feature folders | `kebab-case` | `features/user-profile/` |
-| React components | `kebab-case.tsx` | `user-card.tsx` |
-| Views (page-level components) | `kebab-case` + `-view` suffix | `users-view.tsx`, `sign-in-view.tsx` |
-| Hooks | `kebab-case` + `use-` prefix | `use-user-form.ts` |
-| Stores (Zustand) | `kebab-case` + `use-` prefix + `-store` | `use-user-store.ts` |
-| Utilities, services, config | `kebab-case.ts` | `define-ability.ts`, `auth-client.ts` |
-| Server constants | `{name}.constants.ts` | `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts` |
-| Frontend feature constants | `constants.ts` at the root | `features/users/constants.ts` |
-| Module/feature interfaces folder | `interfaces/` | `modules/auth/interfaces/`, `features/users/interfaces/` |
-| Interface file | `{name}.interface.ts` | `create-auth-options.interface.ts` |
-| Module/feature enums folder | `enums/` | `modules/auth/enums/`, `features/users/enums/` |
-| Enum file | `{name}.enum.ts` | `user-role.enum.ts` |
-| Barrel files | `index.ts` | `components/index.ts` |
-| Test files | same as source + `.test` or `.spec` | `user.service.spec.ts` |
-| Shared schema folders | `kebab-case/` matching the feature module | `health/`, `user/` |
-| Shared schema files | `kebab-case.schema.ts` inside that folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
-| E2E tests | `kebab-case.spec.ts` | `login-flow.spec.ts` |
+| Kind                             | Case                                      | Example                                                           |
+| -------------------------------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| Directories / feature folders    | `kebab-case`                              | `features/user-profile/`                                          |
+| React components                 | `kebab-case.tsx`                          | `user-card.tsx`                                                   |
+| Views (page-level components)    | `kebab-case` + `-view` suffix             | `users-view.tsx`, `sign-in-view.tsx`                              |
+| Hooks                            | `kebab-case` + `use-` prefix              | `use-user-form.ts`                                                |
+| Stores (Zustand)                 | `kebab-case` + `use-` prefix + `-store`   | `use-user-store.ts`                                               |
+| Utilities, services, config      | `kebab-case.ts`                           | `define-ability.ts`, `auth-client.ts`                             |
+| Server constants                 | `{name}.constants.ts`                     | `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts` |
+| Frontend feature constants       | `constants.ts` at the root                | `features/users/constants.ts`                                     |
+| Module/feature interfaces folder | `interfaces/`                             | `modules/auth/interfaces/`, `features/users/interfaces/`          |
+| Interface file                   | `{name}.interface.ts`                     | `create-auth-options.interface.ts`                                |
+| Module/feature enums folder      | `enums/`                                  | `modules/auth/enums/`, `features/users/enums/`                    |
+| Enum file                        | `{name}.enum.ts`                          | `user-role.enum.ts`                                               |
+| Barrel files                     | `index.ts`                                | `components/index.ts`                                             |
+| Test files                       | same as source + `.test` or `.spec`       | `user.service.spec.ts`                                            |
+| Shared schema folders            | `kebab-case/` matching the feature module | `health/`, `user/`                                                |
+| Shared schema files              | `kebab-case.schema.ts` inside that folder | `health/health.schema.ts`, `user/create-user.schema.ts`           |
+| E2E tests                        | `kebab-case.spec.ts`                      | `login-flow.spec.ts`                                              |
 
 - **NEVER** use `index.tsx` for components — only `index.ts` for barrels.
 - **NEVER** mix cases in a single filename (`userCard.tsx`, `User-card.tsx`).
@@ -99,42 +99,44 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Backend (NestJS)
 
-| Kind | Case | Example |
-|---|---|---|
-| Module | `PascalCase` + `Module` (singular) | `UserModule`, `ObservabilityModule` |
-| Controller | `PascalCase` + `Controller` (singular) | `UserController` |
-| Shared infra service | `PascalCase` matching the capability + `Service` | `ObservabilityService`, `PosthogService`, `PrismaService` |
-| Action service | `PascalCase` verb + resource + `Service` | `FindOneUserService` |
-| Guard / Interceptor / Pipe | `PascalCase` + kind | `CanUpdateUserGuard` |
-| Module file | `kebab-case.module.ts` (singular) | `user.module.ts`, `observability.module.ts` |
-| Shared infra service file | `{name}.service.ts` in `services/{name}/` when the area has multiple; else next to the module | `services/posthog/posthog.service.ts`, `prisma.service.ts` |
-| Controller file | `kebab-case.controller.ts` (singular) | `user.controller.ts` |
-| Action service folder | `{verb}-{resource}/` | `find-one-user/` |
-| Action service file | `{verb}-{resource}.service.ts` | `find-one-user/find-one-user.service.ts` |
-| Module constants file | `{name}.constants.ts` at module root | `auth.constants.ts` |
-| Interface file | `{name}.interface.ts` in `interfaces/` | `create-auth-options.interface.ts` |
-| Interface | `PascalCase` | `CreateAuthOptions` |
-| Enum file | `{name}.enum.ts` in `enums/` | `user-role.enum.ts` |
-| Enum | `PascalCase` | `UserRole` |
-| Controller spec | colocated beside controller | `user.controller.spec.ts` |
-| Constants file | `{module}.constants.ts` | `observability.constants.ts` |
-| Interface folder | `interfaces/` | `shared/observability/interfaces/` |
-| Interface file | `{name}.interface.ts` — **one interface per file** | `http-outcome-request.interface.ts` |
-| Filter file | `{name}.filter.ts` inside the owning module | `observability/filters/http-outcome.filter.ts` |
-| Interceptor file | `{name}.interceptor.ts` inside the owning module | `modules/{name}/interceptors/{name}.interceptor.ts` |
-| DTO file | `kebab-case.dto.ts` or verb-based | `create-user.dto.ts` |
-| DTO class | `PascalCase` + `Dto` | `CreateUserDto` |
+| Kind                       | Case                                                                                          | Example                                                        |
+| -------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Module                     | `PascalCase` + `Module` (singular)                                                            | `UserModule`, `ObservabilityModule`                            |
+| Controller                 | `PascalCase` + `Controller` (singular)                                                        | `UserController`                                               |
+| Shared infra service       | `PascalCase` matching the capability + `Service`                                              | `ObservabilityService`, `PosthogService`, `PrismaService`      |
+| Action service             | `PascalCase` verb + resource + `Service`                                                      | `FindOneUserService`                                           |
+| Guard / Interceptor / Pipe / Filter / Middleware | `PascalCase` + kind                                                          | `HttpObservabilityMiddleware`                                  |
+| Module file                | `kebab-case.module.ts` (singular)                                                             | `user.module.ts`, `observability.module.ts`                    |
+| Shared infra service file  | `{name}.service.ts` in `services/{name}/` when the area has multiple; else next to the module | `services/posthog/posthog.service.ts`, `prisma.service.ts`     |
+| Controller file            | `kebab-case.controller.ts` (singular)                                                         | `user.controller.ts`                                           |
+| Action service folder      | `{verb}-{resource}/`                                                                          | `find-one-user/`                                               |
+| Action service file        | `{verb}-{resource}.service.ts`                                                                | `find-one-user/find-one-user.service.ts`                       |
+| Module constants file      | `{name}.constants.ts` at module root                                                          | `auth.constants.ts`                                            |
+| Interface file             | `{name}.interface.ts` in `interfaces/`                                                        | `create-auth-options.interface.ts`                             |
+| Interface                  | `PascalCase`                                                                                  | `CreateAuthOptions`                                            |
+| Enum file                  | `{name}.enum.ts` in `enums/`                                                                  | `user-role.enum.ts`                                            |
+| Enum                       | `PascalCase`                                                                                  | `UserRole`                                                     |
+| Controller spec            | colocated beside controller                                                                   | `user.controller.spec.ts`                                      |
+| Constants file             | `{module}.constants.ts`                                                                       | `observability.constants.ts`                                   |
+| Interface folder           | `interfaces/`                                                                                 | `shared/observability/interfaces/`                             |
+| Interface file             | `{name}.interface.ts` — **one interface per file**                                            | `http-outcome-request.interface.ts`                            |
+| Filter file                | `{name}.filter.ts` inside the owning module                                                   | `observability/filters/http-observability.filter.ts`           |
+| Interceptor file           | `{name}.interceptor.ts` inside the owning module                                              | `observability/interceptors/http-observability.interceptor.ts` |
+| Middleware file            | `{name}.middleware.ts` inside the owning module                                               | `observability/middlewares/http-observability.middleware.ts`   |
+| Better-auth plugin file    | `{name}.plugin.ts` in `modules/auth/plugins/`                                                 | `http-observability.plugin.ts`                                 |
+| DTO file                   | `kebab-case.dto.ts` or verb-based                                                             | `create-user.dto.ts`                                           |
+| DTO class                  | `PascalCase` + `Dto`                                                                          | `CreateUserDto`                                                |
 
 - Feature/module folder: `kebab-case`, **singular** — `user/`, `order-item/`.
 - Module constants: `{name}.constants.ts` at the module or shared-area root — `modules/auth/auth.constants.ts`, `shared/mail/mail.constants.ts`. **NEVER** a bare `constants.ts` on the server.
 - Module interfaces: `interfaces/{name}.interface.ts` — `export interface CreateAuthOptions`. Import from `interfaces/index.ts` inside the module.
 - Module enums: `enums/{name}.enum.ts` — `export enum UserRole`. Import from `enums/index.ts` inside the module. **NEVER** declare an `enum` in a service, controller, hook, or other implementation file.
-- **NEVER** declare file-level helper functions beside a class (service, controller, filter, interceptor, hook, processor, guard). Use `private` methods. Spec files may keep local factories. Function modules with no class may keep file-level helpers.
+- **NEVER** declare file-level helper functions beside a class (service, controller, filter, interceptor, middleware, hook, processor, guard). Use `private` methods. Spec files may keep local factories. Function modules with no class may keep file-level helpers.
 - REST route paths: `kebab-case`, plural nouns — `/users`, `/order-items` (route plural, module singular).
 - Route handler methods: match HTTP verb intent — `findAll`, `findOne`, `create`, `update`, `remove`.
 - Action service method: `execute()` — one public entry point per service.
 - Unit test file: colocated in the same folder as source — `find-one-user/find-one-user.service.spec.ts`, `user.controller.spec.ts`, `posthog.service.spec.ts`.
-- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/`, `shared/observability/`, `shared/queue/`, `shared/mail/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`. **NEVER** `shared/filters/` or `shared/interceptors/` — those kinds live in the owning module (`shared/observability/filters/`).
+- Shared infra: `shared/config/`, `shared/prisma/`, `shared/swagger/`, `shared/observability/`, `shared/queue/`, `shared/mail/` — not inside feature modules. **NEVER** `shared/index.ts`. **NEVER** `shared/docs/`. **NEVER** `shared/swagger/index.ts`. **NEVER** `shared/filters/`, `shared/interceptors/`, or `shared/middlewares/` — those kinds live in the owning module (`shared/observability/middlewares/`, `shared/observability/interceptors/`, `shared/observability/filters/`).
 - Shared infra services are named after the **capability** (`ObservabilityService`, `PosthogService`, `PrismaService`). Verb-resource names (`LogHttpOutcomeService`) are **only** for feature action services. Multiple services in one shared area live under `services/{name}/`.
 - Injected constructor params are the class name in `camelCase`. Shared infra **keeps** the `Service` suffix: `observabilityService: ObservabilityService`. **NEVER** `observability`. Action services **drop** `Service` because the field is the use case: `findOneUser: FindOneUserService`.
 - Constants live in `{module}.constants.ts` at the module root (`observability.constants.ts`, `mail.constants.ts`). Values inside remain `SCREAMING_SNAKE_CASE`.
@@ -146,13 +148,13 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Shared Schemas (Zod)
 
-| Kind | Case | Example |
-|---|---|---|
-| Schema module folder | singular `kebab-case` matching the feature | `health/`, `user/`, `order-item/` |
-| Schema file | `kebab-case` + `.schema.ts` inside the module folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
-| Schema export | `PascalCase` + `Schema` suffix | `LoginSchema`, `UserSchema` |
-| Inferred type export | `PascalCase` + `Input` / domain noun | `LoginInput`, `User` |
-| Partial/update schemas | verb or context prefix | `UpdateUserSchema`, `UpdateUserInput` |
+| Kind                   | Case                                                 | Example                                                 |
+| ---------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Schema module folder   | singular `kebab-case` matching the feature           | `health/`, `user/`, `order-item/`                       |
+| Schema file            | `kebab-case` + `.schema.ts` inside the module folder | `health/health.schema.ts`, `user/create-user.schema.ts` |
+| Schema export          | `PascalCase` + `Schema` suffix                       | `LoginSchema`, `UserSchema`                             |
+| Inferred type export   | `PascalCase` + `Input` / domain noun                 | `LoginInput`, `User`                                    |
+| Partial/update schemas | verb or context prefix                               | `UpdateUserSchema`, `UpdateUserInput`                   |
 
 - Schema and inferred type live in the **same** `{name}.schema.ts` file. Examples live only on `.meta({ example })` — **NEVER** as an exported `*Example` constant.
 - **ALWAYS** put schema files in `packages/schemas/src/{module}/`. One module folder may hold multiple `{name}.schema.ts` files.
@@ -167,25 +169,25 @@ Strict naming rules for **all packages** — frontend, backend, shared libraries
 
 ## Database
 
-| Kind | Case | Example |
-|---|---|---|
-| Tables | `snake_case`, singular | `user`, `order_item` |
-| Columns | `camelCase` | `createdAt`, `userId` |
-| Primary keys | `id` | `id` |
-| Foreign keys | `{relatedTable}Id` | `userId`, `orderId` |
-| Indexes | `idx_{table}_{column}` | `idx_user_email` |
-| Enums (DB) | `snake_case` type, `camelCase` values | `order_status.pending` |
+| Kind         | Case                                  | Example                |
+| ------------ | ------------------------------------- | ---------------------- |
+| Tables       | `snake_case`, singular                | `user`, `order_item`   |
+| Columns      | `camelCase`                           | `createdAt`, `userId`  |
+| Primary keys | `id`                                  | `id`                   |
+| Foreign keys | `{relatedTable}Id`                    | `userId`, `orderId`    |
+| Indexes      | `idx_{table}_{column}`                | `idx_user_email`       |
+| Enums (DB)   | `snake_case` type, `camelCase` values | `order_status.pending` |
 
 - Table names are **singular** — `user`, not `users`.
 - Column names are **camelCase** in the database and in TypeScript entities/DTOs.
 
 ## Environment Variables
 
-| Kind | Case | Example |
-|---|---|---|
-| Server secrets | `SCREAMING_SNAKE_CASE` | `BETTER_AUTH_SECRET` |
-| Next.js public vars | `NEXT_PUBLIC_` prefix | `NEXT_PUBLIC_API_URL` |
-| NestJS config keys | `SCREAMING_SNAKE_CASE` | `DATABASE_URL` |
+| Kind                | Case                   | Example               |
+| ------------------- | ---------------------- | --------------------- |
+| Server secrets      | `SCREAMING_SNAKE_CASE` | `BETTER_AUTH_SECRET`  |
+| Next.js public vars | `NEXT_PUBLIC_` prefix  | `NEXT_PUBLIC_API_URL` |
+| NestJS config keys  | `SCREAMING_SNAKE_CASE` | `DATABASE_URL`        |
 
 - **NEVER** prefix server-only secrets with `NEXT_PUBLIC_`.
 - Server env Zod schema: `apps/server/src/shared/config/env.schema.ts` — **NEVER** `env.ts`, **NEVER** in `@saas-kit/schemas`.

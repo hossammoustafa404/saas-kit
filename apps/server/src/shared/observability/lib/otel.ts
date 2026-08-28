@@ -8,17 +8,18 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { NoopSpanProcessor } from '@opentelemetry/sdk-trace';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { config as loadEnv } from 'dotenv';
 import {
-  DEFAULT_POSTHOG_HOST,
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
   OTEL_SERVICE_NAME,
   OTEL_SHUTDOWN_KEEP_ALIVE_MS,
-} from './observability.constants';
-import { isObservabilityEnabled, posthogOtlp } from './utils';
+  POSTHOG_OTLP_LOGS_PATH,
+  POSTHOG_OTLP_TRACES_PATH,
+} from '../observability.constants';
 
 const logger = new Logger('Otel');
 
@@ -28,46 +29,26 @@ let shutdownPromise: Promise<void> | undefined;
 export async function startOtel(): Promise<void> {
   loadEnv({ path: join(process.cwd(), 'apps/server/.env') });
 
-  const env = {
-    POSTHOG_API_KEY: process.env.POSTHOG_API_KEY?.trim() || undefined,
-    POSTHOG_HOST: process.env.POSTHOG_HOST || DEFAULT_POSTHOG_HOST,
-  };
-
-  if (!isObservabilityEnabled(env)) {
-    return;
-  }
-
-  const token = env.POSTHOG_API_KEY;
-  if (token === undefined) {
-    return;
-  }
-
-  const otlp = posthogOtlp({
-    POSTHOG_API_KEY: token,
-    POSTHOG_HOST: env.POSTHOG_HOST,
-  });
-
   try {
+    const traces = posthogOtlpExporterOptions(POSTHOG_OTLP_TRACES_PATH);
+    const logs = posthogOtlpExporterOptions(POSTHOG_OTLP_LOGS_PATH);
+
     sdk = new NodeSDK({
       resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: OTEL_SERVICE_NAME,
       }),
-      traceExporter: new OTLPTraceExporter({
-        url: otlp.traces,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }),
-      logRecordProcessors: [
-        new BatchLogRecordProcessor({
-          exporter: new OTLPLogExporter({
-            url: otlp.logs,
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        }),
-      ],
+      metricReaders: [],
+      ...(traces === undefined
+        ? { spanProcessors: [new NoopSpanProcessor()] }
+        : { traceExporter: new OTLPTraceExporter(traces) }),
+      logRecordProcessors:
+        logs === undefined
+          ? []
+          : [
+              new BatchLogRecordProcessor({
+                exporter: new OTLPLogExporter(logs),
+              }),
+            ],
       instrumentations: [
         getNodeAutoInstrumentations({
           '@opentelemetry/instrumentation-http': {
@@ -92,10 +73,6 @@ export async function startOtel(): Promise<void> {
   }
 
   process.once('SIGTERM', handleOtelSigterm);
-}
-
-export function isOtelStarted(): boolean {
-  return sdk !== undefined;
 }
 
 export async function shutdownOtel(): Promise<void> {
@@ -127,6 +104,20 @@ export async function handleOtelSigterm(): Promise<void> {
   } finally {
     clearInterval(keepAlive);
   }
+}
+
+function posthogOtlpExporterOptions(path: string) {
+  const token = process.env.POSTHOG_API_KEY;
+  const host = process.env.POSTHOG_HOST;
+
+  if (!token || !host) {
+    return undefined;
+  }
+
+  return {
+    url: `${host}${path}`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
 }
 
 function isHealthTrace(request: IncomingMessage): boolean {

@@ -6,6 +6,7 @@ import type { MailJob } from '../../shared/mail/interfaces/mail-job.interface';
 import { MAIL_QUEUE } from '../../shared/mail/mail.constants';
 import { MailModule } from '../../shared/mail/mail.module';
 import { ObservabilityModule } from '../../shared/observability/observability.module';
+import { ObservabilityService } from '../../shared/observability/services';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AuthEventsHook } from './hooks/auth-events.hook';
 import { OriginGateHook } from './hooks/origin-gate.hook';
@@ -15,10 +16,18 @@ import { createAuth } from './lib/auth';
   imports: [
     ObservabilityModule,
     BetterAuthModule.forRootAsync({
-      imports: [MailModule],
-      inject: [PrismaService, getQueueToken(MAIL_QUEUE)],
-      useFactory: (prisma: PrismaService, mailQueue: Queue<MailJob>) => ({
-        auth: createAuth({ prisma, mailQueue }),
+      imports: [MailModule, ObservabilityModule],
+      inject: [
+        PrismaService,
+        getQueueToken(MAIL_QUEUE),
+        ObservabilityService,
+      ],
+      useFactory: (
+        prisma: PrismaService,
+        mailQueue: Queue<MailJob>,
+        observabilityService: ObservabilityService,
+      ) => ({
+        auth: createAuth({ prisma, mailQueue, observabilityService }),
         disableTrustedOriginsCors: true,
         bodyParser: {
           json: { limit: '2mb' },

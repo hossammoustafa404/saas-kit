@@ -5,19 +5,24 @@ import { admin, openAPI } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
 import { EnvSchema } from '../../../shared/config/env.schema';
 import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
-import { VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
+import { AUTH_BASE_PATH, VERIFICATION_EMAIL_SUBJECT } from '../auth.constants';
 import { UserRole } from '../enums';
 import type { CreateAuthOptions } from '../interfaces';
+import { httpObservabilityPlugin } from '../plugins/http-observability.plugin';
 
 const logger = new Logger('createAuth');
 
-export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
+export function createAuth({
+  prisma,
+  mailQueue,
+  observabilityService,
+}: CreateAuthOptions) {
   const env = EnvSchema.parse(process.env);
 
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    basePath: '/api/auth',
+    basePath: AUTH_BASE_PATH,
     database: prismaAdapter(prisma, { provider: 'postgresql' }),
     trustedOrigins: [env.WEB_ORIGIN, env.ADMIN_ORIGIN, env.BETTER_AUTH_URL],
     emailAndPassword: {
@@ -59,6 +64,9 @@ export function createAuth({ prisma, mailQueue }: CreateAuthOptions) {
         },
       }),
       openAPI(),
+      ...(observabilityService === undefined
+        ? []
+        : [httpObservabilityPlugin(observabilityService)]),
     ],
     hooks: {},
     databaseHooks: {},

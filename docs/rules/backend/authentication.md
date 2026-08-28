@@ -18,9 +18,11 @@ src/
         │   ├── auth-event-user.interface.ts
         │   ├── capture-auth-event-input.interface.ts
         │   └── auth-hook-user-context.interface.ts
+        ├── auth.module.ts
         ├── lib/
         │   └── auth.ts           # betterAuth({ ... }) instance
-        ├── auth.module.ts
+        ├── plugins/
+        │   └── http-observability.plugin.ts  # incoming and outgoing HTTP logs for auth routes
         └── hooks/
             ├── origin-gate.hook.ts
             └── auth-events.hook.ts
@@ -124,7 +126,7 @@ Customer sign-up requires Email verification (`requireEmailVerification: true`).
 
 Auth owns copy. `createAuth` receives the mail queue and enqueues `{ to, subject, text, html }` from `sendVerificationEmail` (plain text, `html` empty). Enqueue failure is logged and sign-up still succeeds: Better Auth persists the User first, then swallows email-callback errors in `runInBackgroundOrAwait`, so throwing cannot fail the request or roll back the User. A second sign-up with the same email is `409`. Better Auth signs a JWT and verifies it — it does not persist a verification row for this flow. BullMQ’s Redis connection lives in `shared/queue/`. Shared mail lives in `shared/mail/`: the mail queue, Resend, and the processor in the same Nest process. Resend failure is retried by the queue, except reserved test recipients (`example.com`) which are skipped when `NODE_ENV` is not `production`, and other 4xx responses (except 408, 425, and 429) which fail without retry. Network errors from Resend bubble and retry.
 
-Wire `createAuth({ prisma, mailQueue })` via Nest `forRootAsync`, injecting `PrismaService` and `getQueueToken(MAIL_QUEUE)`. Forgotten password stays forbidden.
+Wire `createAuth({ prisma, mailQueue, observabilityService })` via Nest `forRootAsync`, injecting `PrismaService`, `getQueueToken(MAIL_QUEUE)`, and `ObservabilityService`. Seed omits `observabilityService` — it calls `auth.api` and never hits HTTP hooks. Forgotten password stays forbidden. Better-auth never enters the Nest interceptor or filter; `httpObservabilityPlugin` logs incoming auth requests from `hooks.before` and outgoing from `hooks.after` (`method`, `path`, `request`).
 
 Env: `REDIS_URL`, `RESEND_API_KEY`, `MAIL_FROM`. E2E and `nx serve` require Redis as well as PostgreSQL. Seed stubs `mailQueue.add`. E2E finishes Email verification by reading the queued mail job and calling Better Auth’s verify URL — testers do not parse mailboxes.
 
@@ -146,5 +148,6 @@ Inject `AuthService<Auth>` (`Auth` is `ReturnType<typeof createAuth>`) for progr
 - **NEVER** expose `BETTER_AUTH_SECRET` or provider client secrets to clients.
 - **NEVER** trust client-sent user IDs — resolve identity from `@Session()` or `req.user`.
 - **NEVER** implement sign-in/sign-up/sign-out in feature controllers — better-auth handles auth routes.
+- Keep `/api/auth` and `/api/auth/*path` in `setGlobalPrefix` exclude (with Bull Board). `setGlobalPrefix` replaces the exclude list AuthModule set in its constructor.
 - **NEVER** send mail inline on the auth request path.
 - Session and user types come from the shared schemas package or better-auth — do not duplicate them.

@@ -1,10 +1,10 @@
 import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ZodValidationPipe } from 'nestjs-zod';
-import { AUTH_DOCS_ROUTE } from './modules/auth/auth.constants';
+import { AUTH_BASE_PATH, AUTH_DOCS_ROUTE } from './modules/auth/auth.constants';
 import type { Env } from './shared/config/env.schema';
-import { JsonLogger } from './shared/observability/json-logger';
-import { isOtelStarted, startOtel } from './shared/observability/otel';
+import { AppLogger } from './shared/observability/lib/app-logger';
+import { startOtel } from './shared/observability/lib/otel';
 import { BULL_BOARD_ROUTE } from './shared/queue/queue.constants';
 import { setupSwagger } from './shared/swagger/setup-swagger';
 
@@ -16,7 +16,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
-    ...(isOtelStarted() ? { logger: new JsonLogger() } : {}),
+    logger: new AppLogger(),
   });
   app.enableShutdownHooks();
   const config = app.get(ConfigService<Env, true>);
@@ -24,7 +24,11 @@ async function bootstrap() {
   const port = config.get('PORT', { infer: true });
 
   app.setGlobalPrefix(globalPrefix, {
-    exclude: [{ path: BULL_BOARD_ROUTE.slice(1), method: RequestMethod.ALL }],
+    exclude: [
+      { path: BULL_BOARD_ROUTE.slice(1), method: RequestMethod.ALL },
+      AUTH_BASE_PATH,
+      `${AUTH_BASE_PATH}/*path`,
+    ],
   });
   app.enableCors({
     origin: [

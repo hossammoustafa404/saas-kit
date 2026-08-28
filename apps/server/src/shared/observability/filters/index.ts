@@ -1,1 +1,1 @@
-export { HttpOutcomeFilter } from './http-outcome.filter';
+export { HttpObservabilityFilter } from './http-observability.filter';

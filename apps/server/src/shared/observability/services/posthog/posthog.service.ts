@@ -13,7 +13,6 @@ import type {
   CaptureEvent,
   PosthogClient,
 } from '../../interfaces';
-import { isObservabilityEnabled } from '../../utils';
 
 @Injectable()
 export class PosthogService implements CaptureClient, OnModuleDestroy {
@@ -51,18 +50,14 @@ export class PosthogService implements CaptureClient, OnModuleDestroy {
   }
 
   private createClient(configService: ConfigService<Env, true>): PosthogClient {
-    const env = {
-      POSTHOG_API_KEY: configService.get('POSTHOG_API_KEY', { infer: true }),
-      POSTHOG_HOST: configService.get('POSTHOG_HOST', { infer: true }),
-    };
-
-    if (!isObservabilityEnabled(env)) {
+    const token = configService.get('POSTHOG_API_KEY', { infer: true });
+    const host = configService.get('POSTHOG_HOST', { infer: true });
+    if (token === undefined || host === undefined) {
       return this.createNoopPosthogClient();
     }
 
-    const token = env.POSTHOG_API_KEY;
-    const client = new PostHog(token as string, {
-      host: env.POSTHOG_HOST,
+    const client = new PostHog(token, {
+      host,
     });
 
     client.on('error', (error: unknown) => {
