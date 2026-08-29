@@ -35,7 +35,8 @@ export function LandingPricing() {
               key={plan.name}
               className={cn(
                 'relative flex flex-col overflow-visible border-border/60',
-                plan.highlighted && 'border-primary shadow-lg shadow-primary/10',
+                plan.highlighted &&
+                  'border-primary shadow-lg shadow-primary/10',
               )}
             >
               {plan.highlighted && (
@@ -58,7 +59,10 @@ export function LandingPricing() {
               <CardContent className="flex-1">
                 <ul className="space-y-3">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2 text-sm"
+                    >
                       <Check
                         className="mt-0.5 size-4 shrink-0 text-primary"
                         aria-hidden="true"

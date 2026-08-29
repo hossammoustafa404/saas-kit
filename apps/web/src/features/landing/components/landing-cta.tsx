@@ -24,8 +24,8 @@ export function LandingCta() {
               Ready to move faster?
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Join thousands of teams using {PRODUCT_NAME} to stay aligned,
-              ship on time, and hit their goals.
+              Join thousands of teams using {PRODUCT_NAME} to stay aligned, ship
+              on time, and hit their goals.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
