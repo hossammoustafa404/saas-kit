@@ -129,6 +129,83 @@ describe('ObservabilityService', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it('should log queue lifecycle events without job payloads or email', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logForQueue({
+      event: 'added',
+      queueName: 'mail',
+      jobId: '42',
+      jobName: 'send',
+    });
+    service.logForQueue({ event: 'active', queueName: 'mail', jobId: '42' });
+    service.logForQueue({ event: 'completed', queueName: 'mail', jobId: '42' });
+    service.logForQueue({ event: 'stalled', queueName: 'mail', jobId: '42' });
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: new Error(`Resend rejected ${EMAIL}`),
+    });
+
+    expect(logger.log).toHaveBeenNthCalledWith(
+      1,
+      'Queue Job Added: mail send (job 42)',
+    );
+    expect(logger.log).toHaveBeenNthCalledWith(
+      2,
+      'Queue Job Active: mail (job 42)',
+    );
+    expect(logger.log).toHaveBeenNthCalledWith(
+      3,
+      'Queue Job Completed: mail (job 42)',
+    );
+    expect(logger.warn).toHaveBeenCalledWith('Queue Job Stalled: mail (job 42)');
+    expect(logger.error).toHaveBeenCalledWith(
+      'Queue Job Failed: mail (job 42) - Resend rejected [REDACTED]',
+      expect.any(String),
+    );
+    expectNoPii(logger);
+  });
+
+  it('should log a failed queue job when the error is a plain string', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: 'SMTP connection timed out',
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Queue Job Failed: mail (job 42) - SMTP connection timed out',
+    );
+    expectNoPii(logger);
+  });
+
+  it('should redact quoted-local-part and IP-literal emails in log messages', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: new Error(
+        'Rejected "pii.user+tag"@example.com and user@[192.168.1.1]',
+      ),
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Queue Job Failed: mail (job 42) - Rejected [REDACTED] and [REDACTED]',
+      expect.any(String),
+    );
+    expectNoPii(logger);
+  });
+
   it('should be constructable by Nest without a logger provider', async () => {
     const module = await Test.createTestingModule({
       providers: [ObservabilityService],

@@ -1,6 +1,7 @@
 export const VERIFICATION_EMAIL_SUBJECT = 'Verify your email';
 export const INVITATION_EMAIL_SUBJECT = 'You are invited to an Organization';
 export const ACCEPT_INVITATION_PATH = '/accept-invitation';
+export const DASHBOARD_PATH = '/dashboard';
 export const SUPER_ADMIN_CANNOT_HAVE_MEMBERSHIP =
   'Super Admin cannot have a Membership';
 export const AUTH_BASE_PATH = '/api/auth';

@@ -6,12 +6,19 @@ import {
   Optional,
   type LoggerService,
 } from '@nestjs/common';
-import type { HttpOutcomeRequest, LogHttpOutcomeInput } from '../../interfaces';
+import type {
+  HttpOutcomeRequest,
+  LogForQueueInput,
+  LogHttpOutcomeInput,
+  QueueJobEvent,
+} from '../../interfaces';
+import { redactEmailsInText } from '../../lib/redact-emails-in-text';
 import {
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
   MIN_CLIENT_ERROR,
   MIN_SERVER_ERROR,
+  REDACTED_VALUE,
   UNKNOWN_ROUTE,
   UNKNOWN_STATUS_REASON,
 } from '../../observability.constants';
@@ -40,7 +47,9 @@ export class ObservabilityService {
     const message = this.outgoingMessage(statusCode, request, exception);
 
     if (statusCode >= MIN_SERVER_ERROR) {
-      const stack = exception instanceof Error ? exception.stack : undefined;
+      const stack = this.sanitizeForLog(
+        exception instanceof Error ? exception.stack : undefined,
+      );
       if (stack === undefined) {
         this.logger.error?.(message);
       } else {
@@ -50,6 +59,37 @@ export class ObservabilityService {
     }
 
     if (statusCode >= MIN_CLIENT_ERROR) {
+      this.logger.warn?.(message);
+      return;
+    }
+
+    this.logger.log?.(message);
+  }
+
+  logForQueue({
+    event,
+    queueName,
+    jobId,
+    jobName,
+    error,
+  }: LogForQueueInput): void {
+    const message = `Queue Job ${this.formatQueueEvent(event)}: ${this.queueJobRoute(queueName, jobId, jobName)}${event === 'failed' ? this.queueErrorDetail(error) : ''}`;
+
+    if (event === 'failed') {
+      const stack = this.sanitizeForLog(
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      if (stack === undefined) {
+        this.logger.error?.(message);
+        return;
+      }
+
+      this.logger.error?.(message, stack);
+      return;
+    }
+
+    if (event === 'stalled') {
       this.logger.warn?.(message);
       return;
     }
@@ -71,7 +111,7 @@ export class ObservabilityService {
     exception: unknown,
   ): string {
     const reason = STATUS_CODES[statusCode] ?? UNKNOWN_STATUS_REASON;
-    const errorMessage = this.exceptionMessage(exception);
+    const errorMessage = this.sanitizeForLog(this.exceptionMessage(exception));
     const detail =
       statusCode >= MIN_CLIENT_ERROR &&
       errorMessage !== undefined &&
@@ -84,6 +124,10 @@ export class ObservabilityService {
   private exceptionMessage(exception: unknown): string | undefined {
     if (exception instanceof HttpException) {
       return this.httpExceptionMessage(exception);
+    }
+
+    if (typeof exception === 'string' && exception !== '') {
+      return exception;
     }
 
     if (exception instanceof Error && exception.message !== '') {
@@ -137,6 +181,38 @@ export class ObservabilityService {
       this.pathWithoutQuery(request.originalUrl ?? request.url) ?? UNKNOWN_ROUTE;
 
     return request.method === undefined ? path : `${request.method} ${path}`;
+  }
+
+  private queueJobRoute(
+    queueName: string,
+    jobId: string,
+    jobName?: string,
+  ): string {
+    const label = jobName === undefined ? queueName : `${queueName} ${jobName}`;
+
+    return `${label} (job ${jobId})`;
+  }
+
+  private formatQueueEvent(event: QueueJobEvent): string {
+    return `${event.charAt(0).toUpperCase()}${event.slice(1)}`;
+  }
+
+  private queueErrorDetail(error: unknown): string {
+    const message = this.sanitizeForLog(this.exceptionMessage(error));
+
+    if (message === undefined) {
+      return '';
+    }
+
+    return ` - ${message}`;
+  }
+
+  private sanitizeForLog(value: string | undefined): string | undefined {
+    if (value === undefined || value === '') {
+      return value;
+    }
+
+    return redactEmailsInText(value, REDACTED_VALUE);
   }
 
   private pathWithoutQuery(url: string | undefined): string | undefined {

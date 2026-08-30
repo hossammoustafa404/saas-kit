@@ -1,3 +1,4 @@
+export { AUTH_ROUTES } from './constants';
 export {
   AcceptInvitationView,
   CheckEmailView,
