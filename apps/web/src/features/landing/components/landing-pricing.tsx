@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { AUTH_ROUTES } from '@/features/auth';
 import { cn } from '@/lib/utils';
 
 import { LANDING_PRICING } from '../constants';
@@ -74,7 +75,7 @@ export function LandingPricing() {
               </CardContent>
               <CardFooter>
                 <Link
-                  href="#get-started"
+                  href={AUTH_ROUTES.signUp}
                   className={cn(
                     buttonVariants({
                       variant: plan.highlighted ? 'default' : 'outline',
