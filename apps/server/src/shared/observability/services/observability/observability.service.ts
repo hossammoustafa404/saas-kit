@@ -13,10 +13,12 @@ import type {
   QueueJobEvent,
 } from '../../interfaces';
 import {
+  EMAIL_IN_TEXT_PATTERN,
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
   MIN_CLIENT_ERROR,
   MIN_SERVER_ERROR,
+  REDACTED_VALUE,
   UNKNOWN_ROUTE,
   UNKNOWN_STATUS_REASON,
 } from '../../observability.constants';
@@ -45,7 +47,9 @@ export class ObservabilityService {
     const message = this.outgoingMessage(statusCode, request, exception);
 
     if (statusCode >= MIN_SERVER_ERROR) {
-      const stack = exception instanceof Error ? exception.stack : undefined;
+      const stack = this.sanitizeForLog(
+        exception instanceof Error ? exception.stack : undefined,
+      );
       if (stack === undefined) {
         this.logger.error?.(message);
       } else {
@@ -72,7 +76,9 @@ export class ObservabilityService {
     const message = `Queue Job ${this.formatQueueEvent(event)}: ${this.queueJobRoute(queueName, jobId, jobName)}${event === 'failed' ? this.queueErrorDetail(error) : ''}`;
 
     if (event === 'failed') {
-      const stack = error instanceof Error ? error.stack : undefined;
+      const stack = this.sanitizeForLog(
+        error instanceof Error ? error.stack : undefined,
+      );
 
       if (stack === undefined) {
         this.logger.error?.(message);
@@ -105,7 +111,7 @@ export class ObservabilityService {
     exception: unknown,
   ): string {
     const reason = STATUS_CODES[statusCode] ?? UNKNOWN_STATUS_REASON;
-    const errorMessage = this.exceptionMessage(exception);
+    const errorMessage = this.sanitizeForLog(this.exceptionMessage(exception));
     const detail =
       statusCode >= MIN_CLIENT_ERROR &&
       errorMessage !== undefined &&
@@ -188,13 +194,21 @@ export class ObservabilityService {
   }
 
   private queueErrorDetail(error: unknown): string {
-    const message = this.exceptionMessage(error);
+    const message = this.sanitizeForLog(this.exceptionMessage(error));
 
     if (message === undefined) {
       return '';
     }
 
     return ` - ${message}`;
+  }
+
+  private sanitizeForLog(value: string | undefined): string | undefined {
+    if (value === undefined || value === '') {
+      return value;
+    }
+
+    return value.replace(EMAIL_IN_TEXT_PATTERN, REDACTED_VALUE);
   }
 
   private pathWithoutQuery(url: string | undefined): string | undefined {

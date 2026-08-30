@@ -129,10 +129,9 @@ describe('ObservabilityService', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it('should log queue lifecycle events without job payloads', () => {
+  it('should log queue lifecycle events without job payloads or email', () => {
     const logger = createLogger();
     const service = new ObservabilityService(logger);
-    const recipient = 'pii-user@example.com';
 
     service.logForQueue({
       event: 'added',
@@ -147,7 +146,7 @@ describe('ObservabilityService', () => {
       event: 'failed',
       queueName: 'mail',
       jobId: '42',
-      error: new Error(`Resend rejected ${recipient}`),
+      error: new Error(`Resend rejected ${EMAIL}`),
     });
 
     expect(logger.log).toHaveBeenNthCalledWith(
@@ -164,9 +163,10 @@ describe('ObservabilityService', () => {
     );
     expect(logger.warn).toHaveBeenCalledWith('Queue Job Stalled: mail (job 42)');
     expect(logger.error).toHaveBeenCalledWith(
-      `Queue Job Failed: mail (job 42) - Resend rejected ${recipient}`,
+      'Queue Job Failed: mail (job 42) - Resend rejected [REDACTED]',
       expect.any(String),
     );
+    expectNoPii(logger);
   });
 
   it('should be constructable by Nest without a logger provider', async () => {
