@@ -6,7 +6,12 @@ import {
   Optional,
   type LoggerService,
 } from '@nestjs/common';
-import type { HttpOutcomeRequest, LogHttpOutcomeInput } from '../../interfaces';
+import type {
+  HttpOutcomeRequest,
+  LogForQueueInput,
+  LogHttpOutcomeInput,
+  QueueJobEvent,
+} from '../../interfaces';
 import {
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
@@ -50,6 +55,35 @@ export class ObservabilityService {
     }
 
     if (statusCode >= MIN_CLIENT_ERROR) {
+      this.logger.warn?.(message);
+      return;
+    }
+
+    this.logger.log?.(message);
+  }
+
+  logForQueue({
+    event,
+    queueName,
+    jobId,
+    jobName,
+    error,
+  }: LogForQueueInput): void {
+    const message = `Queue Job ${this.formatQueueEvent(event)}: ${this.queueJobRoute(queueName, jobId, jobName)}${event === 'failed' ? this.queueErrorDetail(error) : ''}`;
+
+    if (event === 'failed') {
+      const stack = error instanceof Error ? error.stack : undefined;
+
+      if (stack === undefined) {
+        this.logger.error?.(message);
+        return;
+      }
+
+      this.logger.error?.(message, stack);
+      return;
+    }
+
+    if (event === 'stalled') {
       this.logger.warn?.(message);
       return;
     }
@@ -137,6 +171,30 @@ export class ObservabilityService {
       this.pathWithoutQuery(request.originalUrl ?? request.url) ?? UNKNOWN_ROUTE;
 
     return request.method === undefined ? path : `${request.method} ${path}`;
+  }
+
+  private queueJobRoute(
+    queueName: string,
+    jobId: string,
+    jobName?: string,
+  ): string {
+    const label = jobName === undefined ? queueName : `${queueName} ${jobName}`;
+
+    return `${label} (job ${jobId})`;
+  }
+
+  private formatQueueEvent(event: QueueJobEvent): string {
+    return `${event.charAt(0).toUpperCase()}${event.slice(1)}`;
+  }
+
+  private queueErrorDetail(error: unknown): string {
+    const message = this.exceptionMessage(error);
+
+    if (message === undefined) {
+      return '';
+    }
+
+    return ` - ${message}`;
   }
 
   private pathWithoutQuery(url: string | undefined): string | undefined {

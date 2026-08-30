@@ -129,6 +129,46 @@ describe('ObservabilityService', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it('should log queue lifecycle events without job payloads', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+    const recipient = 'pii-user@example.com';
+
+    service.logForQueue({
+      event: 'added',
+      queueName: 'mail',
+      jobId: '42',
+      jobName: 'send',
+    });
+    service.logForQueue({ event: 'active', queueName: 'mail', jobId: '42' });
+    service.logForQueue({ event: 'completed', queueName: 'mail', jobId: '42' });
+    service.logForQueue({ event: 'stalled', queueName: 'mail', jobId: '42' });
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: new Error(`Resend rejected ${recipient}`),
+    });
+
+    expect(logger.log).toHaveBeenNthCalledWith(
+      1,
+      'Queue Job Added: mail send (job 42)',
+    );
+    expect(logger.log).toHaveBeenNthCalledWith(
+      2,
+      'Queue Job Active: mail (job 42)',
+    );
+    expect(logger.log).toHaveBeenNthCalledWith(
+      3,
+      'Queue Job Completed: mail (job 42)',
+    );
+    expect(logger.warn).toHaveBeenCalledWith('Queue Job Stalled: mail (job 42)');
+    expect(logger.error).toHaveBeenCalledWith(
+      `Queue Job Failed: mail (job 42) - Resend rejected ${recipient}`,
+      expect.any(String),
+    );
+  });
+
   it('should be constructable by Nest without a logger provider', async () => {
     const module = await Test.createTestingModule({
       providers: [ObservabilityService],

@@ -8,6 +8,7 @@ import { MAIL_SEND_JOB } from '../../../shared/mail/mail.constants';
 import {
   ACCEPT_INVITATION_PATH,
   AUTH_BASE_PATH,
+  DASHBOARD_PATH,
   INVITATION_EMAIL_SUBJECT,
   VERIFICATION_EMAIL_SUBJECT,
 } from '../auth.constants';
@@ -39,13 +40,20 @@ export function createAuth({
     },
     emailVerification: {
       sendOnSignUp: true,
-      autoSignInAfterVerification: false,
-      sendVerificationEmail: async (data) => {
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        const verificationUrl = new URL(url);
+        verificationUrl.searchParams.set(
+          'callbackURL',
+          `${env.WEB_ORIGIN}${DASHBOARD_PATH}`,
+        );
+
         try {
           await mailQueue.add(MAIL_SEND_JOB, {
-            to: data.user.email,
+            to: user.email,
             subject: VERIFICATION_EMAIL_SUBJECT,
-            text: `Verify your email by opening this link:\n${data.url}`,
+            text: `Verify your email by opening this link:\n${verificationUrl.toString()}`,
             html: '',
           });
         } catch (error) {

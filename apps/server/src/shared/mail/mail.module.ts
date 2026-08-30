@@ -5,6 +5,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import type { Env } from '../config/env.schema';
+import { ObservabilityModule } from '../observability/observability.module';
 import {
   MAIL_KEEP_COMPLETED_JOBS,
   MAIL_KEEP_FAILED_JOBS,
@@ -13,10 +14,12 @@ import {
   MAIL_SEND_ATTEMPTS,
   RESEND,
 } from './mail.constants';
+import { MailQueueEventsListener } from './mail-queue-events.listener';
 import { SendMailProcessor } from './send-mail.processor';
 
 @Module({
   imports: [
+    ObservabilityModule,
     BullModule.registerQueue({
       name: MAIL_QUEUE,
       defaultJobOptions: {
@@ -42,6 +45,7 @@ import { SendMailProcessor } from './send-mail.processor';
         new Resend(config.get('RESEND_API_KEY', { infer: true })),
     },
     SendMailProcessor,
+    MailQueueEventsListener,
   ],
   exports: [BullModule],
 })
