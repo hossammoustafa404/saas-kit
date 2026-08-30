@@ -12,8 +12,8 @@ import type {
   LogHttpOutcomeInput,
   QueueJobEvent,
 } from '../../interfaces';
+import { redactEmailsInText } from '../../lib/redact-emails-in-text';
 import {
-  EMAIL_IN_TEXT_PATTERN,
   HEALTH_TRACE_METHOD,
   HEALTH_TRACE_PATH,
   MIN_CLIENT_ERROR,
@@ -212,7 +212,7 @@ export class ObservabilityService {
       return value;
     }
 
-    return value.replace(EMAIL_IN_TEXT_PATTERN, REDACTED_VALUE);
+    return redactEmailsInText(value, REDACTED_VALUE);
   }
 
   private pathWithoutQuery(url: string | undefined): string | undefined {
