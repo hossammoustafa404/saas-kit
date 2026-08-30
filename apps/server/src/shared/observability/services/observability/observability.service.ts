@@ -126,6 +126,10 @@ export class ObservabilityService {
       return this.httpExceptionMessage(exception);
     }
 
+    if (typeof exception === 'string' && exception !== '') {
+      return exception;
+    }
+
     if (exception instanceof Error && exception.message !== '') {
       return exception.message;
     }

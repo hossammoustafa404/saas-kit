@@ -169,6 +169,43 @@ describe('ObservabilityService', () => {
     expectNoPii(logger);
   });
 
+  it('should log a failed queue job when the error is a plain string', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: 'SMTP connection timed out',
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Queue Job Failed: mail (job 42) - SMTP connection timed out',
+    );
+    expectNoPii(logger);
+  });
+
+  it('should redact quoted-local-part and IP-literal emails in log messages', () => {
+    const logger = createLogger();
+    const service = new ObservabilityService(logger);
+
+    service.logForQueue({
+      event: 'failed',
+      queueName: 'mail',
+      jobId: '42',
+      error: new Error(
+        'Rejected "pii.user+tag"@example.com and user@[192.168.1.1]',
+      ),
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Queue Job Failed: mail (job 42) - Rejected [REDACTED] and [REDACTED]',
+      expect.any(String),
+    );
+    expectNoPii(logger);
+  });
+
   it('should be constructable by Nest without a logger provider', async () => {
     const module = await Test.createTestingModule({
       providers: [ObservabilityService],

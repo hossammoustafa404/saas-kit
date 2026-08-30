@@ -12,5 +12,6 @@ export const OTEL_SHUTDOWN_KEEP_ALIVE_MS = 1_000;
 export const LOG_TRACE_ID = 'trace_id';
 export const LOG_SPAN_ID = 'span_id';
 export const REDACTED_VALUE = '[REDACTED]';
+/** Log PII redaction for common email shapes; not full RFC 5322 coverage. */
 export const EMAIL_IN_TEXT_PATTERN =
-  /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  /(?:"[^"@]+"|[a-zA-Z0-9._%+-]+)@(?:\[[0-9.]+\]|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63})/g;
