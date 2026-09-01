@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { Activity } from 'lucide-react';
 
-import { buttonVariants } from '@/components/ui/button';
-import { AUTH_ROUTES } from '@/features/auth';
-import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 import { LANDING_NAV_LINKS, PRODUCT_NAME } from '../constants';
-import { ThemeToggle } from './theme-toggle';
+import { LandingHeaderAuthButtons } from './landing-auth-buttons';
 
 export function LandingHeader() {
   return (
@@ -36,21 +34,7 @@ export function LandingHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link
-            href={AUTH_ROUTES.signIn}
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'hidden sm:inline-flex',
-            )}
-          >
-            Sign in
-          </Link>
-          <Link
-            href={AUTH_ROUTES.signUp}
-            className={buttonVariants({ size: 'sm' })}
-          >
-            Start free trial
-          </Link>
+          <LandingHeaderAuthButtons />
         </div>
       </div>
     </header>

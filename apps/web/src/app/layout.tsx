@@ -1,6 +1,7 @@
 import './global.css';
 import { Geist } from 'next/font/google';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/providers';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('font-sans', geist.variable)} suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

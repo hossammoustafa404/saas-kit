@@ -4,4 +4,3 @@ export { LandingFooter } from './landing-footer';
 export { LandingHeader } from './landing-header';
 export { LandingHero } from './landing-hero';
 export { LandingPricing } from './landing-pricing';
-export { ThemeToggle } from './theme-toggle';

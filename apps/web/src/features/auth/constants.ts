@@ -10,6 +10,10 @@ export const AUTH_ROUTES = {
   acceptInvitation: '/accept-invitation',
 } as const;
 
+export const PROTECTED_ROUTE_PREFIXES = [AUTH_ROUTES.dashboard] as const;
+
+export const AUTH_GUEST_ROUTES = [AUTH_ROUTES.signIn, AUTH_ROUTES.signUp] as const;
+
 export const AUTH_ERROR_MESSAGES = {
   INVALID_EMAIL_OR_PASSWORD: 'Invalid email or password.',
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:

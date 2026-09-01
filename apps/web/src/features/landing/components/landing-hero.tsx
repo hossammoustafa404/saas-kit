@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
-import { AUTH_ROUTES } from '@/features/auth';
 import { cn } from '@/lib/utils';
 
 import { LANDING_STATS, PRODUCT_NAME } from '../constants';
+import { LandingHeroPrimaryButton } from './landing-auth-buttons';
 
 export function LandingHero() {
   return (
@@ -39,13 +39,7 @@ export function LandingHero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              href={AUTH_ROUTES.signUp}
-              className={cn(buttonVariants({ size: 'lg' }), 'w-full sm:w-auto')}
-            >
-              Start free trial
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
+            <LandingHeroPrimaryButton />
             <Link
               href="#features"
               className={cn(

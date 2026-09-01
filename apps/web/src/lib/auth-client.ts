@@ -11,7 +11,7 @@ const authClient = createAuthClient({
   ],
   fetchOptions: {
     onRequest: async (context) => {
-      if (typeof window === 'undefined') {
+      if (typeof window === 'undefined' && !context.headers.get('cookie')) {
         const { headers } = await import('next/headers');
         const cookie = (await headers()).get('cookie') ?? '';
         context.headers.set('cookie', cookie);

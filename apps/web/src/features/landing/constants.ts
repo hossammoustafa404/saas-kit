@@ -10,6 +10,8 @@ import {
 
 export const PRODUCT_NAME = 'Pulse';
 
+export const MOCK_DEFAULT_PLAN_NAME = 'Starter';
+
 export interface LandingFeature {
   icon: LucideIcon;
   title: string;

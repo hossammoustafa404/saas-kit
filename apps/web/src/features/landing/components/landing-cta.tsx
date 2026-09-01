@@ -1,11 +1,5 @@
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-
-import { buttonVariants } from '@/components/ui/button';
-import { AUTH_ROUTES } from '@/features/auth';
-import { cn } from '@/lib/utils';
-
 import { PRODUCT_NAME } from '../constants';
+import { LandingCtaAuthButtons } from './landing-auth-buttons';
 
 export function LandingCta() {
   return (
@@ -30,19 +24,7 @@ export function LandingCta() {
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href={AUTH_ROUTES.signUp}
-                className={cn(buttonVariants({ size: 'lg' }), 'gap-1.5')}
-              >
-                Start your free trial
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-              <Link
-                href={AUTH_ROUTES.signIn}
-                className={buttonVariants({ size: 'lg', variant: 'outline' })}
-              >
-                Sign in
-              </Link>
+              <LandingCtaAuthButtons />
             </div>
 
             <p className="mt-6 text-sm text-muted-foreground">

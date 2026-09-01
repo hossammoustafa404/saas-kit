@@ -1,8 +1,12 @@
-export { AUTH_ROUTES } from './constants';
+export {
+  AUTH_GUEST_ROUTES,
+  AUTH_ROUTES,
+  CHECK_EMAIL_CALLBACK_QUERY_PARAM,
+  PROTECTED_ROUTE_PREFIXES,
+} from './constants';
 export {
   AcceptInvitationView,
   CheckEmailView,
-  DashboardView,
   SignInView,
   SignUpView,
 } from './views';
