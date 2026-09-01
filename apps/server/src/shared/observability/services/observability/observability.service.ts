@@ -6,6 +6,7 @@ import {
   Optional,
   type LoggerService,
 } from '@nestjs/common';
+import { metrics, type Attributes } from '@opentelemetry/api';
 import type {
   HttpOutcomeRequest,
   LogForQueueInput,
@@ -18,6 +19,7 @@ import {
   HEALTH_TRACE_PATH,
   MIN_CLIENT_ERROR,
   MIN_SERVER_ERROR,
+  OTEL_SERVICE_NAME,
   REDACTED_VALUE,
   UNKNOWN_ROUTE,
   UNKNOWN_STATUS_REASON,
@@ -37,6 +39,11 @@ export class ObservabilityService {
     }
 
     this.logger.log?.(`Incoming Request: ${this.route(request)}`);
+  }
+
+  // Do not add User id, email, or Session id as metric attributes (high cardinality).
+  recordMeter(name: string, attributes?: Attributes): void {
+    metrics.getMeter(OTEL_SERVICE_NAME).createCounter(name).add(1, attributes);
   }
 
   logOutcomingRes({
@@ -103,6 +110,10 @@ export class ObservabilityService {
       this.pathWithoutQuery(request.originalUrl ?? request.url) ===
         HEALTH_TRACE_PATH
     );
+  }
+
+  requestPath(request: HttpOutcomeRequest): string | undefined {
+    return this.pathWithoutQuery(request.originalUrl ?? request.url);
   }
 
   private outgoingMessage(
@@ -177,8 +188,7 @@ export class ObservabilityService {
   }
 
   private route(request: HttpOutcomeRequest): string {
-    const path =
-      this.pathWithoutQuery(request.originalUrl ?? request.url) ?? UNKNOWN_ROUTE;
+    const path = this.requestPath(request) ?? UNKNOWN_ROUTE;
 
     return request.method === undefined ? path : `${request.method} ${path}`;
   }

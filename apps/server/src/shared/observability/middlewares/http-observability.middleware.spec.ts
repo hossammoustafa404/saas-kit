@@ -1,4 +1,5 @@
 import type { LoggerService } from '@nestjs/common';
+import { HTTP_SERVER_REQUESTS_METER } from '../observability.constants';
 import { ObservabilityService } from '../services';
 import { HttpObservabilityMiddleware } from './http-observability.middleware';
 
@@ -10,7 +11,11 @@ const USERS_PATH = '/api/users';
 describe('HttpObservabilityMiddleware', () => {
   it('should log the incoming Nest request without email, password, or body and call next', () => {
     const logger = createLogger();
-    const middleware = createMiddleware(logger);
+    const service = new ObservabilityService(logger);
+    const recordMeter = jest
+      .spyOn(service, 'recordMeter')
+      .mockImplementation(() => undefined);
+    const middleware = new HttpObservabilityMiddleware(service);
     const next = jest.fn();
 
     middleware.use(createRequest(), {}, next);
@@ -18,27 +23,32 @@ describe('HttpObservabilityMiddleware', () => {
     expect(logger.log).toHaveBeenCalledWith(
       `Incoming Request: GET ${USERS_PATH}`,
     );
+    expect(recordMeter).toHaveBeenCalledWith(HTTP_SERVER_REQUESTS_METER, {
+      'http.method': 'GET',
+      'http.route': USERS_PATH,
+    });
     expect(logger.warn).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledTimes(1);
     expectNoPii(logger);
   });
 
-  it('should not log Health', () => {
+  it('should not log or record Health', () => {
     const logger = createLogger();
-    const middleware = createMiddleware(logger);
+    const service = new ObservabilityService(logger);
+    const recordMeter = jest
+      .spyOn(service, 'recordMeter')
+      .mockImplementation(() => undefined);
+    const middleware = new HttpObservabilityMiddleware(service);
     const next = jest.fn();
 
     middleware.use({ method: 'GET', originalUrl: '/api/health' }, {}, next);
 
     expect(logger.log).not.toHaveBeenCalled();
+    expect(recordMeter).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
-
-function createMiddleware(logger: LoggerService): HttpObservabilityMiddleware {
-  return new HttpObservabilityMiddleware(new ObservabilityService(logger));
-}
 
 function createRequest() {
   return {

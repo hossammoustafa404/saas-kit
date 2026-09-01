@@ -1,4 +1,5 @@
 export const MAIL_QUEUE = 'mail';
+export const MAIL_EMAILS_SENT_METER = 'mail.emails.sent';
 export const MAIL_SEND_JOB = 'send';
 export const MAIL_SEND_ATTEMPTS = 5;
 export const MAIL_RETRY_DELAY_MS = 2000;
