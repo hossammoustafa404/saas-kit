@@ -2,7 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { UnrecoverableError, type Job } from 'bullmq';
 import type { MailJob } from './interfaces/mail-job.interface';
-import { RESEND } from './mail.constants';
+import { ObservabilityService } from '../observability/services';
+import { MAIL_EMAILS_SENT_METER, RESEND } from './mail.constants';
 import { SendMailProcessor } from './send-mail.processor';
 
 describe('SendMailProcessor', () => {
@@ -14,6 +15,9 @@ describe('SendMailProcessor', () => {
   const config = {
     get: jest.fn(),
   };
+  const observability = {
+    recordMeter: jest.fn(),
+  };
 
   let processor: SendMailProcessor;
 
@@ -23,6 +27,7 @@ describe('SendMailProcessor', () => {
         SendMailProcessor,
         { provide: RESEND, useValue: resend },
         { provide: ConfigService, useValue: config },
+        { provide: ObservabilityService, useValue: observability },
       ],
     }).compile();
 
@@ -32,6 +37,7 @@ describe('SendMailProcessor', () => {
   beforeEach(() => {
     resend.emails.send.mockReset();
     config.get.mockReset();
+    observability.recordMeter.mockReset();
     mockConfig();
     resend.emails.send.mockResolvedValue({
       data: { id: 'email_1' },
@@ -44,6 +50,7 @@ describe('SendMailProcessor', () => {
     await processor.process(createMailJob('casey@example.com'));
 
     expect(resend.emails.send).not.toHaveBeenCalled();
+    expect(observability.recordMeter).not.toHaveBeenCalled();
   });
 
   it('should send through Resend for an example.com recipient in production', async () => {
@@ -58,6 +65,7 @@ describe('SendMailProcessor', () => {
       text: 'Verify your email by opening this link:\nhttps://kit.test/verify',
       html: '',
     });
+    expect(observability.recordMeter).toHaveBeenCalledWith(MAIL_EMAILS_SENT_METER);
   });
 
   it('should send through Resend for a normal recipient', async () => {
@@ -70,6 +78,7 @@ describe('SendMailProcessor', () => {
       text: 'Verify your email by opening this link:\nhttps://kit.test/verify',
       html: '',
     });
+    expect(observability.recordMeter).toHaveBeenCalledWith(MAIL_EMAILS_SENT_METER);
   });
 
   it('should fail without retry when Resend returns a validation error', async () => {
@@ -86,6 +95,7 @@ describe('SendMailProcessor', () => {
     await expect(
       processor.process(createMailJob('casey@customer.test.io')),
     ).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(observability.recordMeter).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -4,9 +4,11 @@ import { Logger } from '@nestjs/common';
 import type { Span } from '@opentelemetry/api';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { NoopSpanProcessor } from '@opentelemetry/sdk-trace';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
@@ -18,6 +20,7 @@ import {
   OTEL_SERVICE_NAME,
   OTEL_SHUTDOWN_KEEP_ALIVE_MS,
   POSTHOG_OTLP_LOGS_PATH,
+  POSTHOG_OTLP_METRICS_PATH,
   POSTHOG_OTLP_TRACES_PATH,
 } from '../observability.constants';
 
@@ -32,12 +35,20 @@ export async function startOtel(): Promise<void> {
   try {
     const traces = posthogOtlpExporterOptions(POSTHOG_OTLP_TRACES_PATH);
     const logs = posthogOtlpExporterOptions(POSTHOG_OTLP_LOGS_PATH);
+    const metricsExport = posthogOtlpExporterOptions(POSTHOG_OTLP_METRICS_PATH);
 
     sdk = new NodeSDK({
       resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: OTEL_SERVICE_NAME,
       }),
-      metricReaders: [],
+      metricReaders:
+        metricsExport === undefined
+          ? []
+          : [
+              new PeriodicExportingMetricReader({
+                exporter: new OTLPMetricExporter(metricsExport),
+              }),
+            ],
       ...(traces === undefined
         ? { spanProcessors: [new NoopSpanProcessor()] }
         : { traceExporter: new OTLPTraceExporter(traces) }),

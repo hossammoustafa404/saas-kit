@@ -4,8 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { UnrecoverableError, type Job } from 'bullmq';
 import { type ErrorResponse, Resend } from 'resend';
 import type { Env } from '../config/env.schema';
+import { ObservabilityService } from '../observability/services';
 import type { MailJob } from './interfaces/mail-job.interface';
 import {
+  MAIL_EMAILS_SENT_METER,
   MAIL_QUEUE,
   RESEND,
   RESEND_BLOCKED_MAIL_DOMAINS,
@@ -20,6 +22,7 @@ export class SendMailProcessor extends WorkerHost {
   constructor(
     @Inject(RESEND) private readonly resend: Resend,
     private readonly config: ConfigService<Env, true>,
+    private readonly observability: ObservabilityService,
   ) {
     super();
   }
@@ -45,6 +48,8 @@ export class SendMailProcessor extends WorkerHost {
       }
       throw new Error(error.message);
     }
+
+    this.observability.recordMeter(MAIL_EMAILS_SENT_METER);
   }
 
   private shouldSkipResendRecipient(email: string): boolean {

@@ -1,5 +1,6 @@
 import {
   POSTHOG_OTLP_LOGS_PATH,
+  POSTHOG_OTLP_METRICS_PATH,
   POSTHOG_OTLP_TRACES_PATH,
 } from '../observability.constants';
 
@@ -24,8 +25,16 @@ jest.mock('@opentelemetry/exporter-logs-otlp-proto', () => ({
   OTLPLogExporter: jest.fn(),
 }));
 
+jest.mock('@opentelemetry/exporter-metrics-otlp-proto', () => ({
+  OTLPMetricExporter: jest.fn(),
+}));
+
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
   OTLPTraceExporter: jest.fn(),
+}));
+
+jest.mock('@opentelemetry/sdk-metrics', () => ({
+  PeriodicExportingMetricReader: jest.fn(),
 }));
 
 jest.mock('@opentelemetry/resources', () => ({
@@ -82,6 +91,9 @@ describe('otel', () => {
     const { OTLPLogExporter } = await import(
       '@opentelemetry/exporter-logs-otlp-proto'
     );
+    const { OTLPMetricExporter } = await import(
+      '@opentelemetry/exporter-metrics-otlp-proto'
+    );
     const { NodeSDK } = await import('@opentelemetry/sdk-node');
     const { NoopSpanProcessor } = await import('@opentelemetry/sdk-trace');
     const { startOtel } = await import('./otel');
@@ -90,6 +102,7 @@ describe('otel', () => {
 
     expect(OTLPTraceExporter).not.toHaveBeenCalled();
     expect(OTLPLogExporter).not.toHaveBeenCalled();
+    expect(OTLPMetricExporter).not.toHaveBeenCalled();
     expect(NodeSDK).toHaveBeenCalledWith(
       expect.objectContaining({
         spanProcessors: [expect.any(NoopSpanProcessor)],
@@ -99,7 +112,7 @@ describe('otel', () => {
     );
   });
 
-  it('should export traces and logs to PostHog when a project token and host are set', async () => {
+  it('should export traces, logs, and metrics to PostHog when a project token and host are set', async () => {
     process.env.POSTHOG_API_KEY = PROJECT_TOKEN;
     process.env.POSTHOG_HOST = POSTHOG_HOST;
     const { OTLPTraceExporter } = await import(
@@ -107,6 +120,12 @@ describe('otel', () => {
     );
     const { OTLPLogExporter } = await import(
       '@opentelemetry/exporter-logs-otlp-proto'
+    );
+    const { OTLPMetricExporter } = await import(
+      '@opentelemetry/exporter-metrics-otlp-proto'
+    );
+    const { PeriodicExportingMetricReader } = await import(
+      '@opentelemetry/sdk-metrics'
     );
     const { startOtel } = await import('./otel');
 
@@ -120,6 +139,13 @@ describe('otel', () => {
     expect(OTLPLogExporter).toHaveBeenCalledWith({
       url: `${POSTHOG_HOST}${POSTHOG_OTLP_LOGS_PATH}`,
       headers,
+    });
+    expect(OTLPMetricExporter).toHaveBeenCalledWith({
+      url: `${POSTHOG_HOST}${POSTHOG_OTLP_METRICS_PATH}`,
+      headers,
+    });
+    expect(PeriodicExportingMetricReader).toHaveBeenCalledWith({
+      exporter: expect.anything(),
     });
   });
 
