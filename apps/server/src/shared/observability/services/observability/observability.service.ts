@@ -6,7 +6,12 @@ import {
   Optional,
   type LoggerService,
 } from '@nestjs/common';
-import { metrics, type Attributes } from '@opentelemetry/api';
+import {
+  metrics,
+  type Attributes,
+  type Counter,
+  type Meter,
+} from '@opentelemetry/api';
 import type {
   HttpOutcomeRequest,
   LogForQueueInput,
@@ -28,6 +33,8 @@ import {
 @Injectable()
 export class ObservabilityService {
   private readonly logger: LoggerService;
+  private readonly meter: Meter = metrics.getMeter(OTEL_SERVICE_NAME);
+  private readonly counters = new Map<string, Counter>();
 
   constructor(@Optional() logger?: LoggerService) {
     this.logger = logger ?? new Logger(ObservabilityService.name);
@@ -43,7 +50,17 @@ export class ObservabilityService {
 
   // Do not add User id, email, or Session id as metric attributes (high cardinality).
   recordMeter(name: string, attributes?: Attributes): void {
-    metrics.getMeter(OTEL_SERVICE_NAME).createCounter(name).add(1, attributes);
+    this.counterFor(name).add(1, attributes);
+  }
+
+  private counterFor(name: string): Counter {
+    let counter = this.counters.get(name);
+    if (counter === undefined) {
+      counter = this.meter.createCounter(name);
+      this.counters.set(name, counter);
+    }
+
+    return counter;
   }
 
   logOutcomingRes({

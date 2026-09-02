@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   type LoggerService,
 } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
 import { Test } from '@nestjs/testing';
 import type { HttpOutcomeRequest } from '../../interfaces';
 import { UNKNOWN_ROUTE } from '../../observability.constants';
@@ -214,6 +215,30 @@ describe('ObservabilityService', () => {
     expect(module.get(ObservabilityService)).toBeInstanceOf(
       ObservabilityService,
     );
+  });
+
+  it('should reuse counter instruments across recordMeter calls', () => {
+    const add = jest.fn();
+    const createCounter = jest.fn().mockReturnValue({ add });
+    const getMeter = jest
+      .spyOn(metrics, 'getMeter')
+      .mockReturnValue({ createCounter } as never);
+
+    const service = new ObservabilityService(createLogger());
+
+    service.recordMeter('http.server.requests', { method: 'GET' });
+    service.recordMeter('http.server.requests', { method: 'POST' });
+    service.recordMeter('mail.emails.sent');
+
+    expect(createCounter).toHaveBeenCalledTimes(2);
+    expect(createCounter).toHaveBeenCalledWith('http.server.requests');
+    expect(createCounter).toHaveBeenCalledWith('mail.emails.sent');
+    expect(add).toHaveBeenCalledTimes(3);
+    expect(add).toHaveBeenNthCalledWith(1, 1, { method: 'GET' });
+    expect(add).toHaveBeenNthCalledWith(2, 1, { method: 'POST' });
+    expect(add).toHaveBeenNthCalledWith(3, 1, undefined);
+
+    getMeter.mockRestore();
   });
 });
 
